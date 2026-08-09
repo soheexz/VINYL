@@ -658,7 +658,7 @@ body.railoff .railtoggle{transform:translate(calc(-1 * var(--railbase)),-50%);}
 .crates{
   position:absolute;top:max(18px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);
   display:flex;gap:6px;padding:5px;border-radius:999px;z-index:19;max-width:46vw;
-  background:rgba(0,0,0,.4);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  background:rgba(22,20,26,.8);
   box-shadow:0 8px 24px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.14);
   overflow-x:auto;-webkit-overflow-scrolling:touch;
 }
@@ -688,6 +688,12 @@ body.railoff .railtoggle{transform:translate(calc(-1 * var(--railbase)),-50%);}
   /* 반투명하면 뒤쪽 밝은 요소(톤암 받침 등)가 비쳐 얼룩처럼 보인다 → 불투명하게 */
   background:#1b1920;
   box-shadow:0 22px 54px rgba(0,0,0,.65), inset 0 0 0 1px rgba(255,255,255,.14);
+  /* 사파리에서 위쪽 요소의 backdrop-filter 가 아래 요소에 얼룩을 남기는 일이 있다.
+     자체 합성 레이어로 격리하고 바깥으로 새는 그리기를 막는다. */
+  isolation:isolate;
+  overflow:hidden;
+  will-change:transform,opacity;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
   opacity:0;transform:translateY(-8px) scale(.97);pointer-events:none;transition:.2s cubic-bezier(.2,.8,.25,1);
 }
 .menu.on{opacity:1;transform:none;pointer-events:auto;}
@@ -746,8 +752,8 @@ body.railoff .railtoggle{transform:translate(calc(-1 * var(--railbase)),-50%);}
 .chip{
   height:36px;padding:0 15px;border-radius:999px;display:flex;align-items:center;gap:7px;
   font-size:12px;font-weight:600;letter-spacing:.02em;
-  background:rgba(0,0,0,.42);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);color:rgba(255,255,255,.8);transition:.2s;
+  background:rgba(22,20,26,.82);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16);color:rgba(255,255,255,.82);transition:.2s;
 }
 .chip[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#111;}
 
@@ -1011,7 +1017,7 @@ body.ythide #ytwrap{
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
     <div style="padding:8px 13px 4px;font:500 10px/1.4 ui-monospace,Menlo,monospace;
-                color:rgba(255,255,255,.35);letter-spacing:.04em">build r48</div>
+                color:rgba(255,255,255,.35);letter-spacing:.04em">build r50</div>
   </div>
   <div class="menu" id="chooser"></div>
   <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
@@ -2896,9 +2902,9 @@ function adWatch(){
   (function check(){
     if(!ready||!player.getDuration) return;
     const d=player.getDuration()||0;
-    const looksAd = d>0 && d<62;                 // 광고는 대개 1분 미만
+    const looksAd = d>0 && d<45;                 // 광고는 대개 30초 안팎
     document.body.classList.toggle('adshow', looksAd);
-    if(++n<14) adT=setTimeout(check,1200);       // 약 17초간 지켜본다
+    if(++n<8) adT=setTimeout(check,1200);        // 약 10초간만 지켜본다
     else document.body.classList.remove('adshow');
   })();
 }
