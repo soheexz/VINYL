@@ -715,7 +715,9 @@ body.railoff .railtoggle{transform:translate(calc(-1 * var(--railbase)),-50%);}
 /* LP 색 고르기.
    .menu button 이 폭 100%·안쪽 여백을 강제하므로, 선택자를 더 구체적으로 써서 눌러야 한다. */
 .menu .vrow{display:flex;align-items:center;gap:10px;padding:10px 13px 12px;}
-.menu .vrow .lbl{flex:1;font-size:13.5px;color:rgba(255,255,255,.9);white-space:nowrap;}
+/* 판 가운데 원형 라벨(.lbl)과 이름이 겹치면 그 스타일을 물려받아
+   메뉴 한가운데 어두운 타원이 생긴다. 반드시 다른 이름을 쓸 것. */
+.menu .vrow .vlbl{flex:1;font-size:13.5px;color:rgba(255,255,255,.9);white-space:nowrap;}
 .menu .vrow .swatch,
 .menu .vrow .swatch:active,
 .menu .vrow .swatch:hover{
@@ -1008,7 +1010,7 @@ body.ythide #ytwrap{
     <hr>
     <button id="mDelete" class="warn"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4L10.6 10.6l6.3-6.3 1.4 1.4z" transform="translate(2.7 0)"/></svg></span>이 재생목록 삭제</button>
     <hr>
-    <div class="vrow"><span class="lbl">LP 색</span>
+    <div class="vrow"><span class="vlbl">LP 색</span>
       <button class="swatch sw-black" data-v="black" aria-label="블랙" aria-pressed="false"></button>
       <button class="swatch sw-white" data-v="white" aria-label="화이트" aria-pressed="false"></button>
       <button class="swatch sw-clear" data-v="clear" aria-label="투명" aria-pressed="true"></button>
@@ -1017,7 +1019,7 @@ body.ythide #ytwrap{
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
     <div style="padding:8px 13px 4px;font:500 10px/1.4 ui-monospace,Menlo,monospace;
-                color:rgba(255,255,255,.35);letter-spacing:.04em">build r51 (진단)</div>
+                color:rgba(255,255,255,.35);letter-spacing:.04em">build r52</div>
   </div>
   <div class="menu" id="chooser"></div>
   <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
