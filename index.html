@@ -1019,7 +1019,7 @@ body.ythide #ytwrap{
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
     <div style="padding:8px 13px 4px;font:500 10px/1.4 ui-monospace,Menlo,monospace;
-                color:rgba(255,255,255,.35);letter-spacing:.04em">build r52</div>
+                color:rgba(255,255,255,.35);letter-spacing:.04em">build r53</div>
   </div>
   <div class="menu" id="chooser"></div>
   <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
@@ -1612,10 +1612,14 @@ document.head.appendChild(tag);
 window.onYouTubeIframeAPIReady=function(){
   player=new YT.Player('player',{
     height:'100%',width:'100%',
-    playerVars:Object.assign({playsinline:1,controls:0,rel:0,modestbranding:1,iv_load_policy:3,fs:0},
+    /* youtube-nocookie 가 아니라 www.youtube.com 을 쓴다.
+       nocookie 도메인은 로그인 쿠키를 보내지 않아 프리미엄 세션이 인식되지 않는다.
+       (쿠키를 읽거나 복사하지 않는다. 브라우저가 알아서 보내도록 도메인만 맞춘다) */
+    host:'https://www.youtube.com',
+    playerVars:Object.assign({playsinline:1,controls:0,rel:0,modestbranding:1,iv_load_policy:3,fs:0,enablejsapi:1},
       location.protocol.startsWith('http')?{origin:location.origin}:{}),
     events:{
-      onReady(){ ready=true; player.setVolume(85); },
+      onReady(){ ready=true; player.setVolume(85); tryRestore(); },
       onStateChange(e){
         if(e.data===YT.PlayerState.PLAYING){ setPlaying(true); syncMeta(); adWatch(); }
         else if(e.data===YT.PlayerState.PAUSED) setPlaying(false);
@@ -1642,6 +1646,7 @@ function setPlaying(v){
   if(v) startPoll();
   renderAll();
   updateMediaSession();
+  savePlayState();
 }
 function startPoll(){
   if(poll) return;
@@ -1653,6 +1658,8 @@ function startPoll(){
       el.fill.style.width=(p*100)+'%';
       el.time.textContent=fmt(t)+' / '+fmt(d);
       if(playing) setArm(p, true);
+      const now=Date.now();
+      if(playing && now-psT>5000){ psT=now; savePlayState(); }   // 5초마다 위치 저장
     }
   },250);
 }
@@ -1669,6 +1676,7 @@ function syncMeta(){
   el.title.textContent=cleanTitle(it.title||d.title)||'재생 중';
   el.artist.textContent=cleanArtist(it.author||d.author)||'YouTube';
   setLabel(it); setBG(it);
+  updateMediaSession();
 }
 
 /* ============================================================
@@ -1686,6 +1694,8 @@ function playIndex(i){
   el.artist.textContent=cleanArtist(it.author)||'YouTube';
   setArm(0); cueDown();                 // 바깥 홈으로 스윙하며 바늘을 내려놓는다
   player.loadVideoById(it.id); player.playVideo();
+  updateMediaSession();
+  savePlayState();
   setView('player');
   renderAll(); updateButtons();
   setTimeout(()=>railScrollTo(i),120);
@@ -2741,10 +2751,77 @@ function resetInteractions(){
   document.querySelectorAll('.cratechip').forEach(x=>x.classList.remove('dropok'));
 }
 
+/* ============================================================
+   마지막 재생 상태 저장 · 복구
+   앱을 껐다 켜도 듣던 곡과 위치에서 이어지도록 한다.
+   저장 위치는 localStorage 이며, 유튜브 인증 정보는 저장하지 않는다.
+   ============================================================ */
+const PSKEY='vinyl_playstate';
+let pendingResume=null, psT=0;
+
+function savePlayState(){
+  if(current<0 || !crate[current]) return;
+  let t=0, d=0;
+  try{
+    if(ready&&player.getCurrentTime) t=player.getCurrentTime()||0;
+    if(ready&&player.getDuration)    d=player.getDuration()||0;
+  }catch(e){}
+  try{
+    localStorage.setItem(PSKEY, JSON.stringify({
+      videoId : crate[current].id,   // 유튜브 영상 ID
+      crate   : lib.active,          // 재생목록 번호
+      index   : current,             // 목록 안 위치
+      seconds : Math.max(0, t),      // 재생 위치(초)
+      duration: d,
+      playing : !!playing,           // 재생 중 여부
+      savedAt : Date.now()           // 마지막 저장 시각
+    }));
+  }catch(e){}
+}
+function loadPlayState(){
+  try{ return JSON.parse(localStorage.getItem(PSKEY)||'null'); }catch(e){ return null; }
+}
+/* 부팅 때 호출 — 저장된 곡을 현재 목록에서 찾아 대기 상태로 만든다 */
+function preparePlayState(){
+  const s=loadPlayState();
+  if(!s||!s.videoId) return;
+  if(typeof s.crate==='number' && lib.crates[s.crate] && s.crate!==lib.active){
+    lib.active=s.crate; crate=lib.crates[s.crate].items;
+  }
+  let i=crate.findIndex(x=>x.id===s.videoId);
+  if(i<0 && typeof s.index==='number' && crate[s.index] && crate[s.index].id===s.videoId) i=s.index;
+  if(i<0) return;                                   // 지워진 곡이면 복구하지 않는다
+  pendingResume={i, seconds:Math.max(0,(s.seconds||0)-1), duration:s.duration||0};
+}
+/* 플레이어가 준비되면 그 곡을 큐에 올려 둔다.
+   iOS 는 사용자가 누르기 전에는 소리를 낼 수 없으므로 자동 재생은 하지 않고,
+   재생 버튼을 누르는 순간 저장된 지점부터 이어진다. */
+function tryRestore(){
+  if(!pendingResume||!ready) return;
+  const {i,seconds,duration}=pendingResume;
+  pendingResume=null;
+  const it=crate[i];
+  if(!it) return;
+  current=i;
+  el.disc.classList.remove('hide');
+  el.empty.classList.add('gone');
+  lblKey=null; setLabel(it); setBG(it);
+  restoreMeta();
+  if(duration>0){
+    setArm(Math.min(1, seconds/duration));
+    el.fill.style.width=(Math.min(1,seconds/duration)*100)+'%';
+    el.time.textContent=fmt(seconds)+' / '+fmt(duration);
+  } else setArm(0);
+  try{ player.cueVideoById({videoId:it.id, startSeconds:seconds}); }catch(e){}
+  renderAll(); updateButtons();
+  setTimeout(()=>railScrollTo(i),160);
+}
+
 /* iOS 는 웹 페이지가 백그라운드로 가면 미디어를 정지시킨다 (네이티브 앱만 백그라운드 재생 가능).
    막을 수는 없으니, 돌아왔을 때 끊긴 지점에서 이어지도록 한다. */
 let wasPlaying=false, resumeAt=0;
 function rememberPlayback(){
+  savePlayState();
   wasPlaying=playing;
   try{ resumeAt=(ready&&player.getCurrentTime)?player.getCurrentTime():0; }catch(e){ resumeAt=0; }
 }
@@ -2757,7 +2834,7 @@ function tryResume(){
   }catch(e){}
   wasPlaying=false;
 }
-document.addEventListener('visibilitychange',()=>{ if(document.hidden) rememberPlayback(); });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden){ rememberPlayback(); } });
 window.addEventListener('pagehide',rememberPlayback);
 window.addEventListener('blur',rememberPlayback);
 
@@ -2779,6 +2856,11 @@ function updateMediaSession(){
     navigator.mediaSession.setActionHandler('pause',()=>{ if(ready) player.pauseVideo(); });
     navigator.mediaSession.setActionHandler('previoustrack',prev);
     navigator.mediaSession.setActionHandler('nexttrack',next);
+    navigator.mediaSession.setActionHandler('stop',()=>{ if(ready) player.pauseVideo(); });
+    if(navigator.mediaSession.setPositionState && ready && player.getDuration){
+      const d=player.getDuration()||0, t=player.getCurrentTime()||0;
+      if(d>0) navigator.mediaSession.setPositionState({duration:d, position:Math.min(t,d), playbackRate:1});
+    }
   }catch(e){}
 }
 
@@ -2965,6 +3047,8 @@ layout(); setArm(null);
 setTimeout(layout,140);
 restoreMeta();
 if(crate.length){ el.empty.classList.add('gone'); setBG(crate[0]); }
+preparePlayState();   // 저장된 마지막 곡을 찾아 둔다 (플레이어 준비되면 이어짐)
+if(ready) tryRestore();
 
 /* 좁은 화면에서는 선반을 기본으로 접는다 (직접 설정한 적이 없을 때만) */
 try{
