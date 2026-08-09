@@ -1032,7 +1032,7 @@ body.ythide #ytwrap{
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
     <div style="padding:8px 13px 4px;font:500 10px/1.4 ui-monospace,Menlo,monospace;
-                color:rgba(255,255,255,.35);letter-spacing:.04em">build r55</div>
+                color:rgba(255,255,255,.35);letter-spacing:.04em">build r56</div>
   </div>
   <div class="menu" id="chooser"></div>
   <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
@@ -1955,23 +1955,37 @@ function renderRail(){
 let railRAF=null;
 /* fromScroll 이 true 일 때만 곡 정보 자리에 미리보기를 띄운다.
    레이아웃·복귀 때도 띄우면, 앱을 다녀올 때 첫 곡 이름이 잠깐 나타났다 사라진다. */
+/* 가운데를 기준으로 앞뒤 세 장까지 곱게 눕히고, 그보다 먼 판은 서서히 사라지게 한다.
+   거리에 비례해 계속 눕히면 먼 판들이 얇은 조각으로 눌린 채 겹쳐 쌓여 지저분해진다.
+   기울기는 세 장 거리에서 최대에 도달한 뒤 더 커지지 않는다. */
+const RAIL_FADE=3.6;                 // 이 거리(장 단위)를 넘어가면 완전히 사라진다
+const RAIL_TILT=3.0;                 // 이 거리에서 기울기가 최대가 된다
 function railFocus(fromScroll){
   const h=el.rail.clientHeight;
   if(!h) return;
-  const mid=railOff + h/2;
-  const span=h*0.30;
   const items=el.track.querySelectorAll('.lp');
+  if(!items.length) return;
+  const mid=railOff + h/2;
+  // 판 사이 간격을 실제 배치에서 읽는다 (기기·화면 크기와 무관하게 일정한 모양)
+  const stride = items.length>1
+    ? Math.abs(items[1].offsetTop - items[0].offsetTop) || items[0].offsetHeight*0.62
+    : items[0].offsetHeight*0.62;
+
   let best=null, bestD=1e9, bestI=-1;
   items.forEach((n,i)=>{
     const c=n.offsetTop + n.offsetHeight/2;
-    const raw=(c-mid)/span;
-    const cl=Math.max(-2.4, Math.min(2.4, raw));
-    const rx=-58*cl;                                  // 바깥쪽 모서리가 뒤로 눕는다
-    const z=-Math.abs(cl)*185;
-    const sc=1-Math.min(.36, Math.abs(cl)*0.14);
+    const d=(c-mid)/stride;                       // 가운데에서 몇 장 떨어져 있나
+    const a=Math.abs(d);
+    const e=Math.sign(d)*Math.min(1, a/RAIL_TILT);// -1..1 로 부드럽게 묶는다
+    const ae=Math.abs(e);
+    const rx=-58*e;                               // 바깥쪽 모서리가 뒤로 눕는다
+    const z=-ae*190;
+    const sc=1-ae*0.15;
+    const op=Math.max(0, 1-a/RAIL_FADE);          // 멀어지면 겹쳐 쌓이지 않고 사라진다
     n.style.transform=`perspective(1000px) translateZ(${z.toFixed(1)}px) rotateX(${rx.toFixed(1)}deg) scale(${sc.toFixed(3)})`;
-    n.style.zIndex=String(240-Math.round(Math.abs(cl)*95));
-    n.style.opacity=String(Math.max(.22, 1-Math.abs(cl)*0.40).toFixed(3));
+    n.style.zIndex=String(240-Math.round(ae*95));
+    n.style.opacity=op.toFixed(3);
+    n.style.pointerEvents = op<0.06 ? 'none' : '';  // 안 보이는 판은 눌리지 않게
     const ad=Math.abs(c-mid);
     if(ad<bestD){ bestD=ad; best=n; bestI=i; }
   });
