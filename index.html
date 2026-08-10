@@ -297,14 +297,15 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
 /* 판 뒤에 번지는 앨범 색 후광 */
 .halo{
   position:absolute;top:50%;left:48%;
-  width:calc(var(--d) * 1.3);height:calc(var(--d) * 1.3);
-  margin:calc(var(--d) * -0.65) 0 0 calc(var(--d) * -0.65);
+  /* 판 크로마와 바깥 배경(.bg) 사이 경계가 만져지지 않도록 훨씬 넓고 흐리게 퍼뜨린다 */
+  width:calc(var(--d) * 2.4);height:calc(var(--d) * 2.4);
+  margin:calc(var(--d) * -1.2) 0 0 calc(var(--d) * -1.2);
   border-radius:50%;background-size:cover;background-position:center;
-  filter:blur(72px) saturate(1.7);
+  filter:blur(120px) saturate(1.45);
   opacity:0;transition:opacity .7s ease, background-image .7s ease;
   pointer-events:none;
 }
-.halo.on{opacity:.55;}
+.halo.on{opacity:.48;}
 /* 바닥에 닿은 듯한 그림자 */
 .floor{
   position:absolute;left:48%;top:50%;
@@ -2488,29 +2489,30 @@ el.gwrap.addEventListener('pointerup',endGridDrag);
 el.gwrap.addEventListener('pointercancel',endGridDrag);
 
 /* ============================================================
-   앨범 뷰 — 두 손가락으로 꼬집어 칸 크기(개수)를 조절한다
-   --gcell-min 을 매 프레임 바꾸면 grid-template-columns 가 통째로 다시 계산되며
-   버벅인다. 제스처 중에는 대신 값싼 transform: scale() 으로 훑어 보이게 하고,
-   손을 뗄 때 딱 한 번만 실제 칸 크기를 반영해 다시 배치한다. */
+   앨범 뷰 — 두 손가락으로 꼬집어 칸 크기(개수)를 조절한다.
+   손가락이 움직일 때마다(최대 초당 수백 번) --gcell-min 을 바로 반영하면
+   grid-template-columns 가 그만큼 자주 다시 계산돼 버벅인다.
+   대신 값은 매번 기록해 두되, 실제 반영은 requestAnimationFrame 으로 화면 주사율만큼만
+   묶어서 — 계속 실시간으로 이어지면서도 불필요한 재계산은 걸러낸다. */
 const GZ_MIN=92, GZ_MAX=230, GZ_KEY='vinyl_gcellmin';
 let gcellMin=parseFloat(localStorage.getItem(GZ_KEY))||130;
 el.gwrap.style.setProperty('--gcell-min', gcellMin+'px');
 const pinchPts=new Map();
-let pinchStart=null, pinchScale=1;
+let pinchStart=null, pinchTarget=null, pinchRAF=null;
 function pinchDist(){
   const p=[...pinchPts.values()];
   return p.length<2 ? 0 : Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
+}
+function applyPinch(){
+  pinchRAF=null;
+  if(pinchTarget==null) return;
+  gcellMin=pinchTarget;
+  el.gwrap.style.setProperty('--gcell-min', gcellMin.toFixed(1)+'px');
 }
 el.gwrap.addEventListener('pointerdown',e=>{
   pinchPts.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinchPts.size===2){
     pinchStart={dist:pinchDist(), base:gcellMin};
-    el.gwrap.style.transition='none';
-    // 두 손가락 사이 중간 지점을 기준으로 확대되게 — 안 그러면 늘 grid 정중앙 기준으로 훑여서 어색하다
-    const gr=el.gwrap.getBoundingClientRect();
-    const pts=[...pinchPts.values()];
-    const midX=(pts[0].x+pts[1].x)/2-gr.left, midY=(pts[0].y+pts[1].y)/2-gr.top;
-    el.gwrap.style.transformOrigin=midX+'px '+midY+'px';
     // 두 손가락이 잡히면 한 손가락 드래그(순서 바꾸기)는 취소한다
     if(gd){
       clearTimeout(gd.timer);
@@ -2526,22 +2528,16 @@ el.gwrap.addEventListener('pointermove',e=>{
   if(pinchPts.size===2 && pinchStart && pinchStart.dist>0){
     e.preventDefault();
     const scale=pinchDist()/pinchStart.dist;
-    const target=Math.max(GZ_MIN, Math.min(GZ_MAX, pinchStart.base*scale));
-    pinchScale=target/pinchStart.base;
-    el.gwrap.style.transform=`scale(${pinchScale.toFixed(4)})`;
+    pinchTarget=Math.max(GZ_MIN, Math.min(GZ_MAX, pinchStart.base*scale));
+    if(!pinchRAF) pinchRAF=requestAnimationFrame(applyPinch);
   }
 });
 function endPinchPointer(e){
   if(!pinchPts.has(e.pointerId)) return;
   pinchPts.delete(e.pointerId);
   if(pinchPts.size<2 && pinchStart){
-    gcellMin=Math.max(GZ_MIN, Math.min(GZ_MAX, pinchStart.base*pinchScale));
-    pinchStart=null; pinchScale=1;
-    // 실제 칸 크기를 반영하면서, 방금까지의 훑어보기 배율을 부드럽게 1로 되돌린다
-    el.gwrap.style.setProperty('--gcell-min', gcellMin.toFixed(1)+'px');
-    el.gwrap.style.transition='transform .18s ease';
-    el.gwrap.style.transform='';
-    setTimeout(()=>{ el.gwrap.style.transition=''; },200);
+    pinchStart=null; pinchTarget=null;
+    if(pinchRAF){ cancelAnimationFrame(pinchRAF); pinchRAF=null; }
     try{ localStorage.setItem(GZ_KEY, Math.round(gcellMin)); }catch(err){}
   }
 }
@@ -3241,7 +3237,9 @@ window.addEventListener('scroll',()=>{
 let lastResizeW=innerWidth, lastResizeH=innerHeight;
 window.addEventListener('resize',()=>{
   const w=innerWidth, h=innerHeight;
-  if(w===lastResizeW && Math.abs(h-lastResizeH)<150) return;
+  // 폭은 거의 그대로인데(스크롤바 등으로 1~2px 흔들리는 것까지 허용) 높이만 주소창 높이만큼
+  // 바뀐 경우는 무시한다. 폭이 조금이라도 다르면 걸러지지 않던 걸 넉넉하게 고쳤다.
+  if(Math.abs(w-lastResizeW)<10 && Math.abs(h-lastResizeH)<150) return;
   lastResizeW=w; lastResizeH=h;
   layout(); railFocus();
 });
