@@ -21,7 +21,10 @@
   --ink:#fff;
   --ink-dim:rgba(255,255,255,.62);
   --glass:rgba(0,0,0,.42);
-  --d: min(82vh, calc(100vw - var(--railbase) - 40px)); /* 판 지름 (반응형 조절) */
+  /* 판 지름 (반응형 조절). 높이 기준 상한에서 항상 230px를 남겨서
+     화면이 넓어 폰 전용 규칙이 안 걸리는 아이패드·데스크톱 사이트 모드에서도
+     판이 하단 알약(재생 컨트롤·뷰 전환)과 겹치지 않게 한다 */
+  --d: min(calc(100vh - 230px), calc(100vw - var(--railbase) - 40px));
   --railbase:188px;         /* 좌측 LP 선반 폭 (고정) */
   --rail:var(--railbase);   /* 접히면 0 */
   --accent:#ffffff;         /* 앨범에서 뽑은 대표색 */
@@ -369,6 +372,8 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   overflow:hidden;background:#1a1a1e;
   -webkit-mask-image:radial-gradient(circle at 50% 50%, #000 0 99.4%, transparent 99.8%);
           mask-image:radial-gradient(circle at 50% 50%, #000 0 99.4%, transparent 99.8%);
+  /* 일부 기기에서 mask-image 가 모서리를 완전히 못 지우는 경우가 있어 clip-path 로 한 번 더 자른다 */
+  clip-path:circle(50%);
 }
 .lbl img{width:100%;height:100%;object-fit:cover;display:block;}
 .lbl svg{display:block;width:100%;height:100%;}
@@ -379,6 +384,7 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
 .lbl-ring{
   position:absolute;left:31.5%;top:31.5%;width:37%;height:37%;border-radius:50%;pointer-events:none;
   box-shadow:0 2px 10px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.12);
+  clip-path:circle(50%);
 }
 .hole{
   position:absolute;left:48.7%;top:48.7%;width:2.6%;height:2.6%;border-radius:50%;
@@ -400,6 +406,7 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   position:absolute;inset:0;border-radius:50%;overflow:hidden;display:none;
   -webkit-mask-image:radial-gradient(circle at 50% 50%, #000 0 99.4%, transparent 99.8%);
           mask-image:radial-gradient(circle at 50% 50%, #000 0 99.4%, transparent 99.8%);
+  clip-path:circle(50%);
 }
 .discphoto img{width:100%;height:100%;object-fit:cover;display:block;}
 .has-disc .vinyl,.has-disc .deadwax,.has-disc .lbl,.has-disc .lbl-ring{display:none;}
@@ -495,7 +502,14 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   transition:opacity .25s, transform .46s cubic-bezier(.16,.84,.28,1);
 }
 .meta .t{font:700 31px/1.13 "SF Pro Display",system-ui;letter-spacing:-.028em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+/* 제목이 길어서 잘리면 전광판처럼 좌우로 훑어 보여준다 (JS 가 넘칠 때만 켠다) */
+.meta .t.marquee{text-overflow:clip;animation:titleMarquee var(--mq-dur,10s) ease-in-out infinite;}
+@keyframes titleMarquee{
+  0%,10%{transform:translateX(0);}
+  45%,55%{transform:translateX(var(--mq-shift,0px));}
+  90%,100%{transform:translateX(0);}
+}
 .meta .a{font-size:11.5px;color:rgba(255,255,255,.56);margin-top:10px;letter-spacing:.17em;
   text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .meta .tm{font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -649,6 +663,9 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   opacity:0;pointer-events:none;transition:opacity .28s;
 }
 .topbar.on{opacity:1;pointer-events:auto;}
+/* 링크 입력창이 열리면 같은 자리(위쪽)의 재생목록 칩·코너 버튼과 겹쳐 지저분해지므로 잠깐 숨긴다 */
+body.baron .crates,
+body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 .topbar input{
   flex:1;min-width:0;padding:12px 16px;border-radius:999px;border:0;outline:none;
   background:rgba(18,16,22,.92);
@@ -889,20 +906,25 @@ body.ythide #ytwrap{
   .meta .tm{margin-top:8px;padding-top:7px;font-size:10px;}
   .disc{top:calc(50% + 18px);}
   /* 폰에서는 컨트롤을 가운데로 모은다 — 아래 뷰 전환 알약(.switcher)과 겹치지 않을 만큼만 내린다 */
-  .pills{left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 74px);justify-content:center;gap:8px;}
-  .pill{width:46px;height:38px;} .pill.main{width:56px;height:48px;} .pill.sm{width:38px;height:32px;}
-  .pill svg{width:15px;height:15px;} .pill.main svg{width:19px;height:19px;}
+  .pills{left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 74px);justify-content:center;gap:9px;}
+  .pill{width:54px;height:44px;} .pill.main{width:66px;height:56px;} .pill.sm{width:44px;height:36px;}
+  .pill svg{width:18px;height:18px;} .pill.main svg{width:23px;height:23px;}
   /* 상단 재생목록 칩과 우측 코너 버튼이 겹치지 않도록,
      가운데 정렬을 풀고 좌측에 붙인 뒤 폭도 좁힌다 */
-  .crates{left:16px;right:auto;transform:none;max-width:42vw;top:max(10px,env(safe-area-inset-top));}
+  .crates{left:16px;right:auto;transform:none;max-width:42vw;top:max(10px,env(safe-area-inset-top));
+          transition:opacity .2s;}
+  /* 선반이 열리면 같은 자리(왼쪽)를 뒤덮으므로, 재생목록 칩은 선반이 닫혀 있을 때만 보여준다 */
+  body:not(.railoff) .crates{opacity:0;pointer-events:none;}
   .cratechip{height:28px;padding:0 12px;font-size:11.5px;}
   .corner{right:10px;top:max(10px,env(safe-area-inset-top));gap:4px;}
   .chip{height:30px;padding:0 9px;font-size:10.5px;gap:5px;}
   #gridView{padding:calc(env(safe-area-inset-top) + 58px) 16px 96px;}
   .gcell{border-radius:8px;}
   .gcell .gt{font-size:11px;padding:28px 10px 9px;}
-  #ytwrap{display:none;}
-  .switcher{bottom:calc(env(safe-area-inset-bottom) + 12px);}
+  /* 코너 버튼(추가·편집·⋯) 아래로 옮긴다 — 랙 오른쪽 빈자리 기준 위치를 그대로 두면 코너 버튼과 겹친다 */
+  #ytwrap{left:auto;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 40px);width:104px;transform:none;transform-origin:100% 0%;}
+  body.ythide.adshow #ytwrap{left:auto;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 40px);width:168px;}
+  .switcher{bottom:calc(env(safe-area-inset-bottom) + 6px);}
   .modal .card{width:min(340px,86vw);padding:20px;}
 }
 
@@ -1109,6 +1131,22 @@ const el={
   halo:$('#halo'), floor:$('#floor'), metaBox:document.querySelector('.meta')
 };
 
+/* 제목이 박스보다 길면 전광판처럼 좌우로 훑어 보여준다.
+   el.title.textContent 은 여러 곳에서 직접 바꾸므로, 그때마다 일일이 다시 부르는 대신
+   MutationObserver 로 텍스트가 바뀔 때마다 자동으로 넘치는지 검사한다. */
+function updateTitleMarquee(){
+  el.title.classList.remove('marquee');
+  const overflow=el.title.scrollWidth-el.title.clientWidth;
+  if(overflow>4){
+    const shift=-(overflow+10);
+    el.title.style.setProperty('--mq-shift', shift+'px');
+    el.title.style.setProperty('--mq-dur', Math.max(6,Math.min(18,Math.abs(shift)/22)).toFixed(1)+'s');
+    el.title.classList.add('marquee');
+  }
+}
+new MutationObserver(updateTitleMarquee).observe(el.title,{childList:true,characterData:true,subtree:true});
+window.addEventListener('resize',updateTitleMarquee);
+
 /* ---- 라이브러리: 여러 개의 재생목록(크레이트) ---- */
 function save(){ try{ localStorage.setItem(LIB, JSON.stringify(lib)); }catch(e){} }
 
@@ -1188,7 +1226,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
    ============================================================ */
 const G={P:{x:0,y:0},C:{x:0,y:0},D:0,L:0,R:0,base:0};
 let lastP=null;
-const R_OUT=0.965, R_SPAN=0.40;   // 진행률 0 → 반지름 0.965R, 진행률 1 → 0.565R
+const R_OUT=0.985, R_SPAN=0.42;   // 진행률 0 → 반지름 0.985R(판 가장자리), 진행률 1 → 0.565R
 // 라벨 반지름은 0.37R. 헤드셸이 21도 꺾여 있어 계산한 지점보다 바늘이 시각적으로 살짝 더 안쪽에 보이므로
 // 여유를 넉넉히 남겨 절대 라벨 원 안으로 들어가지 않게 한다.
 
@@ -1329,6 +1367,12 @@ function wrapTitle(t,per){
     if(i===lines.length-1&&dropped&&!s.endsWith('…')) s+='…';
     return s;
   });
+}
+/* 썸네일 자체가 안 불러와질 때(삭제된 영상 등)의 기본 라벨 */
+function appIconLabel(){
+  return '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#0d0d10">'+
+    '<img src="icon-512.png" draggable="false" alt="" style="width:56%;height:56%;object-fit:contain;border-radius:22%;opacity:.92">'+
+    '</div>';
 }
 function labelSVG(item){
   const p=PALETTES[hash(item.id)%PALETTES.length];
@@ -1475,7 +1519,9 @@ function setLabel(item){
   if(src){
     const img=new Image();
     img.draggable=false;
-    img.onerror=()=>{ el.lbl.innerHTML=labelSVG(item); };
+    // 유튜브 썸네일을 못 불러오면(삭제된 영상 등) 생성 아트 대신 앱 아이콘을 보여준다 —
+    // 링크는 붙였는데 이미지가 안 나오는 상황이라는 걸 바로 알아보게
+    img.onerror=()=>{ el.lbl.innerHTML=appIconLabel(); };
     img.src=src;
     el.lbl.innerHTML=''; el.lbl.appendChild(img);
   } else {
@@ -1678,6 +1724,9 @@ window.onYouTubeIframeAPIReady=function(){
         else if(e.data===YT.PlayerState.PAUSED) setPlaying(false);
         else if(e.data===YT.PlayerState.ENDED) onEnded();
         else if(e.data===YT.PlayerState.BUFFERING) syncMeta();
+        // loadVideoById 직후의 playVideo() 호출은 아직 로드가 안 끝나 씹히는 경우가 있다.
+        // 곡을 넘겼는데도 계속 재생 중이었다면(의도), CUED 상태가 되는 순간 다시 한 번 눌러 확실히 이어지게 한다
+        else if(e.data===YT.PlayerState.CUED && current>=0){ player.playVideo(); }
       },
       onError(e){
         if(isFile){ toast('오류 '+e.data+' — file:// 에서는 유튜브가 재생을 막습니다'); return; }
@@ -2440,12 +2489,14 @@ el.gwrap.addEventListener('pointercancel',endGridDrag);
 
 /* ============================================================
    앨범 뷰 — 두 손가락으로 꼬집어 칸 크기(개수)를 조절한다
-   ============================================================ */
+   --gcell-min 을 매 프레임 바꾸면 grid-template-columns 가 통째로 다시 계산되며
+   버벅인다. 제스처 중에는 대신 값싼 transform: scale() 으로 훑어 보이게 하고,
+   손을 뗄 때 딱 한 번만 실제 칸 크기를 반영해 다시 배치한다. */
 const GZ_MIN=92, GZ_MAX=230, GZ_KEY='vinyl_gcellmin';
 let gcellMin=parseFloat(localStorage.getItem(GZ_KEY))||130;
 el.gwrap.style.setProperty('--gcell-min', gcellMin+'px');
 const pinchPts=new Map();
-let pinchStart=null;
+let pinchStart=null, pinchScale=1;
 function pinchDist(){
   const p=[...pinchPts.values()];
   return p.length<2 ? 0 : Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
@@ -2454,6 +2505,12 @@ el.gwrap.addEventListener('pointerdown',e=>{
   pinchPts.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinchPts.size===2){
     pinchStart={dist:pinchDist(), base:gcellMin};
+    el.gwrap.style.transition='none';
+    // 두 손가락 사이 중간 지점을 기준으로 확대되게 — 안 그러면 늘 grid 정중앙 기준으로 훑여서 어색하다
+    const gr=el.gwrap.getBoundingClientRect();
+    const pts=[...pinchPts.values()];
+    const midX=(pts[0].x+pts[1].x)/2-gr.left, midY=(pts[0].y+pts[1].y)/2-gr.top;
+    el.gwrap.style.transformOrigin=midX+'px '+midY+'px';
     // 두 손가락이 잡히면 한 손가락 드래그(순서 바꾸기)는 취소한다
     if(gd){
       clearTimeout(gd.timer);
@@ -2469,15 +2526,22 @@ el.gwrap.addEventListener('pointermove',e=>{
   if(pinchPts.size===2 && pinchStart && pinchStart.dist>0){
     e.preventDefault();
     const scale=pinchDist()/pinchStart.dist;
-    gcellMin=Math.max(GZ_MIN, Math.min(GZ_MAX, pinchStart.base*scale));
-    el.gwrap.style.setProperty('--gcell-min', gcellMin.toFixed(1)+'px');
+    const target=Math.max(GZ_MIN, Math.min(GZ_MAX, pinchStart.base*scale));
+    pinchScale=target/pinchStart.base;
+    el.gwrap.style.transform=`scale(${pinchScale.toFixed(4)})`;
   }
 });
 function endPinchPointer(e){
   if(!pinchPts.has(e.pointerId)) return;
   pinchPts.delete(e.pointerId);
   if(pinchPts.size<2 && pinchStart){
-    pinchStart=null;
+    gcellMin=Math.max(GZ_MIN, Math.min(GZ_MAX, pinchStart.base*pinchScale));
+    pinchStart=null; pinchScale=1;
+    // 실제 칸 크기를 반영하면서, 방금까지의 훑어보기 배율을 부드럽게 1로 되돌린다
+    el.gwrap.style.setProperty('--gcell-min', gcellMin.toFixed(1)+'px');
+    el.gwrap.style.transition='transform .18s ease';
+    el.gwrap.style.transform='';
+    setTimeout(()=>{ el.gwrap.style.transition=''; },200);
     try{ localStorage.setItem(GZ_KEY, Math.round(gcellMin)); }catch(err){}
   }
 }
@@ -2663,12 +2727,14 @@ function isFullscreen(){
 }
 function openBar(focus){
   $('#topbar').classList.add('on');
+  document.body.classList.add('baron');
   $('#chipAdd').setAttribute('aria-pressed',true);
   if(focus && !isFullscreen()) setTimeout(()=>$('#url').focus(),60);
 }
 $('#chipAdd').addEventListener('click',async function(){
   if($('#topbar').classList.contains('on')){       // 열려 있으면 닫기
     $('#topbar').classList.remove('on');
+    document.body.classList.remove('baron');
     this.setAttribute('aria-pressed',false);
     return;
   }
@@ -2701,6 +2767,22 @@ function setRail(off,save){
 $('#railToggle').addEventListener('click',()=>
   setRail(!document.body.classList.contains('railoff')));
 try{ if(localStorage.getItem(RAILKEY)==='1') setRail(true,false); }catch(e){}
+
+/* ---- 화면 맨 왼쪽 가장자리를 오른쪽으로 슬라이드해도 선반이 열리게 (버튼 없이도) ---- */
+let edgeSwipe=null;
+document.addEventListener('pointerdown',e=>{
+  if(!document.body.classList.contains('railoff')) return;
+  if(e.clientX>24) return;   // 화면 맨 왼쪽 가장자리에서 시작했을 때만
+  edgeSwipe={x:e.clientX,y:e.clientY,id:e.pointerId};
+});
+document.addEventListener('pointermove',e=>{
+  if(!edgeSwipe||e.pointerId!==edgeSwipe.id) return;
+  const dx=e.clientX-edgeSwipe.x, dy=e.clientY-edgeSwipe.y;
+  if(Math.abs(dy)>40){ edgeSwipe=null; return; }   // 위아래로 어긋나면 스크롤 의도로 보고 포기
+  if(dx>50){ setRail(false); edgeSwipe=null; }
+});
+document.addEventListener('pointerup',()=>{ edgeSwipe=null; });
+document.addEventListener('pointercancel',()=>{ edgeSwipe=null; });
 
 /* ---- 전체 화면 ----
    홈 화면에 추가해서 열면 이미 전체 화면이라 버튼을 숨긴다.
@@ -3152,7 +3234,17 @@ window.addEventListener('scroll',()=>{
   if(window.scrollY||window.scrollX) window.scrollTo(0,0);
 },{passive:true});
 
-window.addEventListener('resize',()=>{ layout(); railFocus(); });
+/* 사파리 주소창이 스크롤에 반응해 접혔다 펴졌다 할 때도 resize 가 발생하고,
+   그때마다 톤암 힌지 위치(h*0.13)가 다시 계산돼 판을 만지작거릴 때마다 팔이 튀는 것처럼 보인다.
+   폭은 그대로인데 높이만 주소창 높이 정도(150px 미만) 바뀐 경우는 무시하고,
+   실제 회전이나 창 크기 변경일 때만 다시 배치한다. */
+let lastResizeW=innerWidth, lastResizeH=innerHeight;
+window.addEventListener('resize',()=>{
+  const w=innerWidth, h=innerHeight;
+  if(w===lastResizeW && Math.abs(h-lastResizeH)<150) return;
+  lastResizeW=w; lastResizeH=h;
+  layout(); railFocus();
+});
 window.addEventListener('orientationchange',()=>setTimeout(layout,320));
 
 /* ============================================================
