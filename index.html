@@ -21,7 +21,7 @@
   --ink:#fff;
   --ink-dim:rgba(255,255,255,.62);
   --glass:rgba(0,0,0,.42);
-  --d:82vh;                 /* 판 지름 */
+  --d: min(82vh, calc(100vw - var(--railbase) - 40px));
   --railbase:188px;         /* 좌측 LP 선반 폭 (고정) */
   --rail:var(--railbase);   /* 접히면 0 */
   --accent:#ffffff;         /* 앨범에서 뽑은 대표색 */
@@ -253,7 +253,8 @@ body.railoff .railfade,
 /* .railcap 은 글자 폭만큼만 넓어서 -101% 로는 다 빠지지 않는다.
    선반 폭(+여백)만큼 밀어야 완전히 사라진다. */
 body.railoff .railcap{
-  transform:translateX(calc(-1 * (var(--railbase) + 24px)));
+  transform:translateX(calc(-1 * (var(--railbase) + 60px))); /* 더 넉넉하게 밖으로 밀어냄 */
+  opacity: 0; /* 완전히 투명하게 만들어 그림자 잔상 제거 */
   pointer-events:none;
 }
 /* 손잡이도 같은 곡선으로 */
@@ -563,7 +564,12 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
 /* align-items:start 가 핵심.
    그리드 항목은 기본이 stretch 라 행 높이만큼 세로로 늘어나고, 그러면 지정한 1:1 비율이
    무시되면서 이미지가 로드될 때마다 행 높이가 다시 계산돼 크기가 출렁인다. */
-.gwrap{display:grid;grid-template-columns:repeat(5,1fr);gap:24px;align-items:start;}
+.gwrap{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(min(130px, 100%), 1fr));
+  gap:24px;
+  align-items:start;
+}
 .gcell{
   position:relative;aspect-ratio:1/1;height:auto;min-height:0;
   overflow:hidden;cursor:pointer;background:#111;
@@ -854,7 +860,9 @@ body.ythide #ytwrap{
 
 /* 폰 — 아이폰·갤럭시. 선반은 기본으로 접고, 열면 화면 위에 겹쳐 나온다 */
 @media (max-width: 820px){
-  :root{--d:86vw;}
+  :root {
+    --d: min(86vw, 70vh); /* 가로는 좁고 높이는 낮을 때 턴테이블이 잘리는 현상 방어 */
+  }
   .stage{left:0;}
   .meta{left:20px;}
   :root{--railbase:172px;}
@@ -874,7 +882,6 @@ body.ythide #ytwrap{
   .corner{right:10px;top:max(10px,env(safe-area-inset-top));gap:5px;}
   .chip{height:30px;padding:0 11px;font-size:11px;}
   #gridView{padding:calc(env(safe-area-inset-top) + 58px) 16px 96px;}
-  .gwrap{grid-template-columns:repeat(2,1fr);gap:14px;}
   .gcell{border-radius:8px;}
   .gcell .gt{font-size:11px;padding:28px 10px 9px;}
   #ytwrap{display:none;}
@@ -884,7 +891,7 @@ body.ythide #ytwrap{
 
 /* 11인치·미니 등 좁은 가로 화면 — 비율은 그대로 두고 여백만 줄인다 */
 @media (min-aspect-ratio: 1/1) and (max-width: 1250px){
-  :root{--railbase:168px; --rail:var(--railbase); --d:80vh;}
+  :root{--railbase:168px; --rail:var(--railbase);}
   .railtrack{padding-left:18px;padding-right:18px;}
   .meta{left:calc(var(--railbase) + 26px);max-width:290px;}
   .meta .t{font:700 27px/1.15 "SF Pro Display",system-ui;}
@@ -896,19 +903,16 @@ body.ythide #ytwrap{
   .corner{right:14px;gap:6px;}
   .chip{padding:0 12px;font-size:11.5px;}
   #gridView{padding-left:22px;padding-right:22px;}
-  .gwrap{grid-template-columns:repeat(4,1fr);gap:20px;}
   #ytwrap{width:124px;}
 }
 @media (min-aspect-ratio: 1/1) and (max-width: 1050px){
-  :root{--railbase:150px; --rail:var(--railbase); --d:78vh;}
-  .gwrap{grid-template-columns:repeat(3,1fr);gap:18px;}
+  :root{--railbase:150px; --rail:var(--railbase);}
   .meta .t{font-size:24px;}
 }
 
 @media (max-aspect-ratio: 1/1){
-  :root{--d:74vw;}
+  :root{--d: min(74vw, calc(100vh - 200px));}
   .disc{left:calc(var(--d) * -0.24);}
-  .gwrap{grid-template-columns:repeat(3,1fr);}
   .meta{left:26px;bottom:64px;max-width:60%;}
   .pills{right:22px;}
 }
@@ -1982,7 +1986,7 @@ function railFocus(fromScroll){
     const z=-ae*190;
     const sc=1-ae*0.15;
     const op=Math.max(0, 1-a/RAIL_FADE);          // 멀어지면 겹쳐 쌓이지 않고 사라진다
-    n.style.transform=`perspective(1000px) translateZ(${z.toFixed(1)}px) rotateX(${rx.toFixed(1)}deg) scale(${sc.toFixed(3)})`;
+    n.style.transform=\`perspective(1000px) translateZ(\${z.toFixed(1)}px) rotateX(\${rx.toFixed(1)}deg) scale(\${sc.toFixed(3)})\`;
     n.style.zIndex=String(240-Math.round(ae*95));
     n.style.opacity=op.toFixed(3);
     n.style.pointerEvents = op<0.06 ? 'none' : '';  // 안 보이는 판은 눌리지 않게
@@ -2047,14 +2051,14 @@ function railScrollTo(i, instant){
 function gridHTML(){
   // 재생 중 표시는 sig 에서 빼고 클래스만 갈아끼운다.
   // 곡을 바꿀 때마다 격자를 통째로 다시 만들면 이미지가 다시 그려지며 깜빡인다.
-  return crate.map((it,i)=>`
-    <div class="gcell" data-i="${i}" data-id="${it.id}">
-      <img src="${it.thumb}" loading="lazy" alt="" draggable="false"
-           onerror="this.onerror=null;this.src='${thumbAlt(it.id)}'">
+  return crate.map((it,i)=>\`
+    <div class="gcell" data-i="\${i}" data-id="\${it.id}">
+      <img src="\${it.thumb}" loading="lazy" alt="" draggable="false"
+           onerror="this.onerror=null;this.src='\${thumbAlt(it.id)}'">
       <div class="geq"><i></i><i></i><i></i></div>
-      <div class="gt">${esc(cleanTitle(it.title)||'제목 없음')}</div>
-      <button class="gdel" data-del="${i}" aria-label="삭제">×</button>
-    </div>`).join('');
+      <div class="gt">\${esc(cleanTitle(it.title)||'제목 없음')}</div>
+      <button class="gdel" data-del="\${i}" aria-label="삭제">×</button>
+    </div>\`).join('');
 }
 function renderGrid(){
   const html=gridHTML();
@@ -2154,7 +2158,7 @@ el.rail.addEventListener('click',pickHandler);
 /* ============================================================
    선반 제스처 — 왼쪽으로 밀어 삭제, 길게 눌러 순서 바꾸기
    ============================================================ */
-/* 선반에서는 밀어서 삭제만. 순서 바꾸기는 앨범 뷰에서 한다 */
+/* 선반에서는 밀어서 삭제만. 순서 바꾸기는 앨범 뷰에서 매끄럽게 지원한다 */
 let g=null;
 const SWIPE_KILL=88;
 
@@ -2280,7 +2284,7 @@ function shuffleGrid(){
     if(from<to && i>from && i<=to) j=i-1;
     else if(from>to && i>=to && i<from) j=i+1;
     c.style.transform = (j===i) ? '' :
-      `translate(${(slots[j].x-slots[i].x).toFixed(1)}px, ${(slots[j].y-slots[i].y).toFixed(1)}px)`;
+      \`translate(\${(slots[j].x-slots[i].x).toFixed(1)}px, \${(slots[j].y-slots[i].y).toFixed(1)}px)\`;
   });
 }
 function chipAt(x,y){
@@ -2335,7 +2339,7 @@ el.gwrap.addEventListener('pointermove',e=>{
   if(Math.hypot(gd.dx,gd.dy)>6){ gd.moved=true; gd.c.classList.add('moving'); }
   // 드래그 중 스크롤이 일어났다면 그만큼 더해 카드가 손가락에 붙어 있게 한다
   const drift=$('#gridView').scrollTop - (gd.scroll0||0);
-  gd.c.style.transform=`translate(${gd.dx}px, ${gd.dy+drift}px) scale(1.07)`;
+  gd.c.style.transform=\`translate(\${gd.dx}px, \${gd.dy+drift}px) scale(1.07)\`;
 
   // 상단 재생목록 칩 위로 끌어오면 순서 바꾸기 대신 그 목록으로 복사
   const ch=chipAt(e.clientX,e.clientY);
@@ -2467,7 +2471,7 @@ $('#mCopyAll').addEventListener('click',()=>{
   const others=lib.crates.map((c,i)=>({c,i})).filter(x=>x.i!==lib.active);
   if(!others.length){ toast('복사할 다른 목록이 없어요 — ＋로 만들어 주세요'); return; }
   chooser.innerHTML=others.map(x=>
-    `<button data-copy="${x.i}"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2l-4.6-4.6L13 5z"/></svg></span>${esc(x.c.name)}<span style="margin-left:auto;opacity:.5;font-size:11px">${x.c.items.length}곡</span></button>`).join('');
+    \`<button data-copy="\${x.i}"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2l-4.6-4.6L13 5z"/></svg></span>\${esc(x.c.name)}<span style="margin-left:auto;opacity:.5;font-size:11px">\${x.c.items.length}곡</span></button>\`).join('');
   chooser.classList.add('on');
 });
 chooser.addEventListener('click',e=>{
