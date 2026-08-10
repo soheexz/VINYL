@@ -21,7 +21,7 @@
   --ink:#fff;
   --ink-dim:rgba(255,255,255,.62);
   --glass:rgba(0,0,0,.42);
-  --d: min(82vh, calc(100vw - var(--railbase) - 40px));
+  --d: min(82vh, calc(100vw - var(--railbase) - 40px)); /* 판 지름 (반응형 조절) */
   --railbase:188px;         /* 좌측 LP 선반 폭 (고정) */
   --rail:var(--railbase);   /* 접히면 0 */
   --accent:#ffffff;         /* 앨범에서 뽑은 대표색 */
@@ -253,8 +253,8 @@ body.railoff .railfade,
 /* .railcap 은 글자 폭만큼만 넓어서 -101% 로는 다 빠지지 않는다.
    선반 폭(+여백)만큼 밀어야 완전히 사라진다. */
 body.railoff .railcap{
-  transform:translateX(calc(-1 * (var(--railbase) + 60px))); /* 더 넉넉하게 밖으로 밀어냄 */
-  opacity: 0; /* 완전히 투명하게 만들어 그림자 잔상 제거 */
+  transform:translateX(calc(-1 * (var(--railbase) + 60px))); /* 선반 그림자 버그 수정 */
+  opacity: 0;
   pointer-events:none;
 }
 /* 손잡이도 같은 곡선으로 */
@@ -1986,7 +1986,7 @@ function railFocus(fromScroll){
     const z=-ae*190;
     const sc=1-ae*0.15;
     const op=Math.max(0, 1-a/RAIL_FADE);          // 멀어지면 겹쳐 쌓이지 않고 사라진다
-    n.style.transform=\`perspective(1000px) translateZ(\${z.toFixed(1)}px) rotateX(\${rx.toFixed(1)}deg) scale(\${sc.toFixed(3)})\`;
+    n.style.transform=`perspective(1000px) translateZ(${z.toFixed(1)}px) rotateX(${rx.toFixed(1)}deg) scale(${sc.toFixed(3)})`;
     n.style.zIndex=String(240-Math.round(ae*95));
     n.style.opacity=op.toFixed(3);
     n.style.pointerEvents = op<0.06 ? 'none' : '';  // 안 보이는 판은 눌리지 않게
@@ -2051,14 +2051,14 @@ function railScrollTo(i, instant){
 function gridHTML(){
   // 재생 중 표시는 sig 에서 빼고 클래스만 갈아끼운다.
   // 곡을 바꿀 때마다 격자를 통째로 다시 만들면 이미지가 다시 그려지며 깜빡인다.
-  return crate.map((it,i)=>\`
-    <div class="gcell" data-i="\${i}" data-id="\${it.id}">
-      <img src="\${it.thumb}" loading="lazy" alt="" draggable="false"
-           onerror="this.onerror=null;this.src='\${thumbAlt(it.id)}'">
+  return crate.map((it,i)=>`
+    <div class="gcell" data-i="${i}" data-id="${it.id}">
+      <img src="${it.thumb}" loading="lazy" alt="" draggable="false"
+           onerror="this.onerror=null;this.src='${thumbAlt(it.id)}'">
       <div class="geq"><i></i><i></i><i></i></div>
-      <div class="gt">\${esc(cleanTitle(it.title)||'제목 없음')}</div>
-      <button class="gdel" data-del="\${i}" aria-label="삭제">×</button>
-    </div>\`).join('');
+      <div class="gt">${esc(cleanTitle(it.title)||'제목 없음')}</div>
+      <button class="gdel" data-del="${i}" aria-label="삭제">×</button>
+    </div>`).join('');
 }
 function renderGrid(){
   const html=gridHTML();
@@ -2284,7 +2284,7 @@ function shuffleGrid(){
     if(from<to && i>from && i<=to) j=i-1;
     else if(from>to && i>=to && i<from) j=i+1;
     c.style.transform = (j===i) ? '' :
-      \`translate(\${(slots[j].x-slots[i].x).toFixed(1)}px, \${(slots[j].y-slots[i].y).toFixed(1)}px)\`;
+      `translate(${(slots[j].x-slots[i].x).toFixed(1)}px, ${(slots[j].y-slots[i].y).toFixed(1)}px)`;
   });
 }
 function chipAt(x,y){
@@ -2339,7 +2339,7 @@ el.gwrap.addEventListener('pointermove',e=>{
   if(Math.hypot(gd.dx,gd.dy)>6){ gd.moved=true; gd.c.classList.add('moving'); }
   // 드래그 중 스크롤이 일어났다면 그만큼 더해 카드가 손가락에 붙어 있게 한다
   const drift=$('#gridView').scrollTop - (gd.scroll0||0);
-  gd.c.style.transform=\`translate(\${gd.dx}px, \${gd.dy+drift}px) scale(1.07)\`;
+  gd.c.style.transform=`translate(${gd.dx}px, ${gd.dy+drift}px) scale(1.07)`;
 
   // 상단 재생목록 칩 위로 끌어오면 순서 바꾸기 대신 그 목록으로 복사
   const ch=chipAt(e.clientX,e.clientY);
@@ -2471,7 +2471,7 @@ $('#mCopyAll').addEventListener('click',()=>{
   const others=lib.crates.map((c,i)=>({c,i})).filter(x=>x.i!==lib.active);
   if(!others.length){ toast('복사할 다른 목록이 없어요 — ＋로 만들어 주세요'); return; }
   chooser.innerHTML=others.map(x=>
-    \`<button data-copy="\${x.i}"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2l-4.6-4.6L13 5z"/></svg></span>\${esc(x.c.name)}<span style="margin-left:auto;opacity:.5;font-size:11px">\${x.c.items.length}곡</span></button>\`).join('');
+    `<button data-copy="${x.i}"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2l-4.6-4.6L13 5z"/></svg></span>${esc(x.c.name)}<span style="margin-left:auto;opacity:.5;font-size:11px">${x.c.items.length}곡</span></button>`).join('');
   chooser.classList.add('on');
 });
 chooser.addEventListener('click',e=>{
