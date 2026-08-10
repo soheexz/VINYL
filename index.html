@@ -319,6 +319,7 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   width:var(--d);height:var(--d);
   margin:calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
   border-radius:50%;
+  overflow:hidden;      /* 스와이프 중 사각형 모서리가 비쳐 보이지 않도록 원형으로 확실히 자른다 */
   transition:opacity .5s ease, transform .6s cubic-bezier(.2,.8,.25,1);
   filter:drop-shadow(0 30px 60px rgba(0,0,0,.55));
   touch-action:none;   /* 좌우 스와이프를 브라우저에 뺏기지 않도록 미리 막는다 */
@@ -865,22 +866,30 @@ body.ythide #ytwrap{
   }
   .stage{left:0;}
   .meta{left:20px;}
+  /* 폰에서는 선반이 스테이지를 밀지 않고 위에 겹쳐 나오므로,
+     데스크톱용 선반-닫힘 이동(translateX)은 무효화한다 — 안 그러면 이중으로 밀려난다 */
+  body.railoff .stage,
+  body.railoff .meta,
+  body.railoff #ytwrap{transform:none;}
   :root{--railbase:172px;}
   .rail,.railbg,.railfade{width:172px;}
   .railtrack{padding:38vh 16px 40vh 16px;}
   .railcap{left:16px;}
   .railtoggle{left:172px;}
-  .meta{left:20px;bottom:calc(env(safe-area-inset-bottom) + 86px);max-width:62vw;}
+  .meta{left:20px;bottom:calc(env(safe-area-inset-bottom) + 190px);max-width:62vw;}
   .meta .t{font:700 22px/1.15 "SF Pro Display",system-ui;}
   .meta .a{font-size:10.5px;margin-top:7px;}
   .meta .tm{margin-top:10px;padding-top:9px;font-size:10px;}
-  .pills{right:16px;bottom:calc(env(safe-area-inset-bottom) + 78px);gap:8px;}
+  /* 폰에서는 컨트롤을 가운데로 모아 재생 버튼이 화면 정중앙에 오게 한다 */
+  .pills{left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 100px);justify-content:center;gap:8px;}
   .pill{width:46px;height:38px;} .pill.main{width:56px;height:48px;} .pill.sm{width:38px;height:32px;}
   .pill svg{width:15px;height:15px;} .pill.main svg{width:19px;height:19px;}
-  .crates{max-width:62vw;top:max(10px,env(safe-area-inset-top));}
+  /* 상단 재생목록 칩과 우측 코너 버튼이 겹치지 않도록,
+     가운데 정렬을 풀고 좌측에 붙인 뒤 폭도 좁힌다 */
+  .crates{left:16px;right:auto;transform:none;max-width:42vw;top:max(10px,env(safe-area-inset-top));}
   .cratechip{height:28px;padding:0 12px;font-size:11.5px;}
-  .corner{right:10px;top:max(10px,env(safe-area-inset-top));gap:5px;}
-  .chip{height:30px;padding:0 11px;font-size:11px;}
+  .corner{right:10px;top:max(10px,env(safe-area-inset-top));gap:4px;}
+  .chip{height:30px;padding:0 9px;font-size:10.5px;gap:5px;}
   #gridView{padding:calc(env(safe-area-inset-top) + 58px) 16px 96px;}
   .gcell{border-radius:8px;}
   .gcell .gt{font-size:11px;padding:28px 10px 9px;}
@@ -910,9 +919,11 @@ body.ythide #ytwrap{
   .meta .t{font-size:24px;}
 }
 
-@media (max-aspect-ratio: 1/1){
+/* 폰(위 820px 블록)이 이미 자체 --d/.meta/.pills 값을 갖고 있으므로,
+   여기는 그보다 넓으면서 세로로 긴 창(태블릿을 세로로 들거나 데스크톱 창을 좁힌 경우)에만 적용한다.
+   안 그러면 이 블록이 파일 순서상 더 뒤에 있어 폰 전용 값을 도로 덮어써 버린다 */
+@media (max-aspect-ratio: 1/1) and (min-width: 821px){
   :root{--d: min(74vw, calc(100vh - 200px));}
-  .disc{left:calc(var(--d) * -0.24);}
   .meta{left:26px;bottom:64px;max-width:60%;}
   .pills{right:22px;}
 }
