@@ -3230,12 +3230,22 @@ window.addEventListener('scroll',()=>{
   if(window.scrollY||window.scrollX) window.scrollTo(0,0);
 },{passive:true});
 
-/* 사파리는 스크롤하다 보면 주소창뿐 아니라 하단 탭바까지 통째로 접혔다 펴지는데,
-   그 폭이 150px 훌쩍 넘어갈 때가 있어 높이 임계값으로는 못 걸러낸다.
-   판·톤암은 --d 등 CSS(dvh/%) 로 이미 알아서 다시 그려지므로, JS 재배치(layout())는
-   폭이 바뀔 때(회전·창 크기 변경)만 하고 높이만 바뀌는 경우는 아예 무시한다. */
+/* 폭/높이 오차 허용치를 아무리 조정해도, 사파리가 주소창·탭바를 접었다 펴는 폭이
+   기기·상황마다 달라서 숫자로는 확실히 못 걸러낸다.
+   대신 이 리사이즈들은 전부 "손가락이 화면에 닿아 스크롤하는 동안" 일어난다는 공통점이 있다.
+   진짜 회전·창 크기 변경은 손을 뗀 뒤(또는 손이 안 닿은 채로) 일어나므로,
+   터치 중이거나 뗀 직후 잠깐(사파리 크롬 애니메이션이 끝날 시간)은 재배치를 미룬다. */
+let touchLive=false, touchLiveT=null;
+const markTouchLive=()=>{ touchLive=true; clearTimeout(touchLiveT); };
+const clearTouchLive=()=>{ clearTimeout(touchLiveT); touchLiveT=setTimeout(()=>{ touchLive=false; },400); };
+document.addEventListener('touchstart',markTouchLive,{passive:true});
+document.addEventListener('touchmove',markTouchLive,{passive:true});
+document.addEventListener('touchend',clearTouchLive,{passive:true});
+document.addEventListener('touchcancel',clearTouchLive,{passive:true});
+
 let lastResizeW=innerWidth;
 window.addEventListener('resize',()=>{
+  if(touchLive) return;   // 손가락이 닿아 있는 동안의 resize는 대부분 사파리 크롬 접힘/펼침이다
   const w=innerWidth;
   if(Math.abs(w-lastResizeW)<10) return;
   lastResizeW=w;
