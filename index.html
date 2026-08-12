@@ -796,6 +796,14 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 .menu .vrow .sw-auto{background:
   repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.34) 0 .6px, rgba(0,0,0,.22) .6px 1.7px),
   linear-gradient(140deg, var(--accent), rgba(255,255,255,.22));}
+/* 원하는 색을 직접 고르는 스와치 — 네이티브 컬러피커를 원 모양으로 눌러 맞춘다 */
+.menu .vrow .sw-custom{cursor:pointer;background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red);}
+.menu .vrow .sw-custom input[type="color"]{
+  -webkit-appearance:none;appearance:none;border:0;padding:0;background:none;cursor:pointer;
+  position:absolute;left:50%;top:50%;width:180%;height:180%;margin:-90% 0 0 -90%;
+}
+.menu .vrow .sw-custom input[type="color"]::-webkit-color-swatch-wrapper{padding:0;}
+.menu .vrow .sw-custom input[type="color"]::-webkit-color-swatch{border:0;}
 .chip{
   height:36px;padding:0 15px;border-radius:999px;display:flex;align-items:center;gap:7px;
   font-size:12px;font-weight:600;letter-spacing:.02em;
@@ -1082,6 +1090,9 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
       <button class="swatch sw-white" data-v="white" aria-label="화이트" aria-pressed="false"></button>
       <button class="swatch sw-clear" data-v="clear" aria-label="투명" aria-pressed="true"></button>
       <button class="swatch sw-auto" data-v="auto" aria-label="앨범색" aria-pressed="false"></button>
+      <label class="swatch sw-custom" data-v="custom" aria-label="사용자 지정" aria-pressed="false">
+        <input type="color" id="vinylCustom" value="#1a5f38">
+      </label>
     </div>
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
@@ -3131,14 +3142,19 @@ function dbgShow(on){
   else toast('진단 표시 꺼짐');
 }
 
-/* LP 색 — 블랙 / 화이트 / 클리어 */
+/* LP 색 — 블랙 / 화이트 / 클리어 / 앨범색 / 직접 고르기 */
 const VKEY='vinyl_color';
-const VNAMES={black:'블랙', white:'화이트', clear:'투명', auto:'앨범색'};
+const VCKEY='vinyl_customhex';
+const VNAMES={black:'블랙', white:'화이트', clear:'투명', auto:'앨범색', custom:'커스텀'};
 let vinylColor='clear';        // 기본은 투명 바이닐
+let customHex='#1a5f38';
+try{ customHex=localStorage.getItem(VCKEY)||customHex; }catch(e){}
+const customInput=$('#vinylCustom');
+if(customInput) customInput.value=customHex;
 function setVinyl(c,save){
   vinylColor=VNAMES[c]?c:'clear';
-  document.body.classList.remove('vinyl-white','vinyl-clear','vinyl-auto');
-  // 앨범색은 인라인 변수로 칠하므로, 다른 색으로 바꿀 땐 지워 준다
+  document.body.classList.remove('vinyl-white','vinyl-clear','vinyl-auto','vinyl-custom');
+  // 앨범색·직접 고른 색은 인라인 변수로 칠하므로, 다른 색으로 바꿀 땐 지워 준다
   ['--v1','--v2','--v3','--v4','--v5','--dw1','--dw2','--gr-hi','--gr-lo',
    '--bd-hi','--bd-lo','--v-edge','--v-shade','--sheen-op']
     .forEach(k=>document.documentElement.style.removeProperty(k));
@@ -3148,13 +3164,23 @@ function setVinyl(c,save){
     if(cur&&cur.thumb) dominantColor(cur.thumb).then(applyAccent);
     else tintVinyl(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
   }
+  if(vinylColor==='custom') tintVinyl(customHex);
   document.querySelectorAll('.swatch').forEach(s=>
     s.setAttribute('aria-pressed', s.dataset.v===vinylColor));
   if(save!==false){ try{ localStorage.setItem(VKEY,vinylColor); }catch(e){} }
 }
+if(customInput){
+  customInput.addEventListener('input',()=>{
+    customHex=customInput.value;
+    try{ localStorage.setItem(VCKEY,customHex); }catch(e){}
+    // 색을 고르는 중에는 바로 미리 보여준다 — 스와치를 따로 안 눌러도 골랐으면 그 색을 쓴다
+    if(vinylColor!=='custom') setVinyl('custom');
+    else tintVinyl(customHex);
+  });
+}
 document.querySelector('.vrow').addEventListener('click',e=>{
   const s=e.target.closest('.swatch');
-  if(s) setVinyl(s.dataset.v);
+  if(s && s.dataset.v!=='custom') setVinyl(s.dataset.v);
 });
 try{ setVinyl(localStorage.getItem(VKEY)||'clear', false); }catch(e){ setVinyl('clear',false); }
 
