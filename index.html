@@ -61,10 +61,16 @@ body.vinyl-clear .disc{filter:drop-shadow(0 24px 44px rgba(0,0,0,.4));}
 body.vinyl-white .disc{filter:drop-shadow(0 26px 50px rgba(0,0,0,.5));}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
 /* iOS 는 100% 가 브라우저 막대를 뺀 높이라 아래에 빈칸이 생긴다.
-   dvh(동적 뷰포트 높이)로 실제 화면 끝까지 채운다. */
-html,body{height:100%;overflow:hidden;background:#0d0d10;}
+   dvh(동적 뷰포트 높이)로 실제 화면 끝까지 채운다.
+   body 를 html 보다 1px 만 더 크게 둔 건 실수가 아니다 — 화면 안 모든 콘텐츠는
+   #app(position:fixed)이라 문서가 스크롤돼도 화면엔 안 움직이는데, 그 1px 여유 덕분에
+   "홈 화면에 추가" 없이 사파리 탭 그대로도 살짝 스크롤시켜 주소창을 접을 수 있다
+   (탭 그대로 쓰면 쿠키가 유지돼 유튜브 프리미엄 로그인이 인식된다). */
+html{height:100%;background:#0d0d10;-webkit-overflow-scrolling:touch;}
+body{height:calc(100% + 1px);overflow:hidden;background:#0d0d10;}
 @supports (height:100dvh){
-  html,body{height:100dvh;}
+  html{height:100dvh;}
+  body{height:calc(100dvh + 1px);}
 }
 body{
   background:#0d0d10;color:var(--ink);
@@ -3226,10 +3232,21 @@ $('#railCap').addEventListener('click',()=>{
 });
 if(dbgOn) dbgShow(true);
 
-/* 어떤 이유로든 문서가 밀려 올라가면 즉시 되돌린다 (상단 바가 사라지는 것 방지) */
+/* #app 은 position:fixed 라 문서가 실제로 스크롤돼도 화면엔 전혀 안 움직인다.
+   그 성질을 거꾸로 이용해서, 사파리 탭(홈 화면 추가 아님)에서는 1px만 살짝 스크롤시켜
+   주소창을 접어 버린다 — 화면은 안 흔들리면서 거의 전체 화면처럼 보이고,
+   "홈 화면에 추가"와 달리 사파리 자체 탭이라 쿠키(유튜브 프리미엄 로그인)는 그대로 유지된다.
+   그래서 아래 스크롤 방지 로직은 완전히 0으로 되돌리지 않고 1px 정도는 허용한다. */
 window.addEventListener('scroll',()=>{
-  if(window.scrollY||window.scrollX) window.scrollTo(0,0);
+  if(window.scrollX || window.scrollY>2 || window.scrollY<0) window.scrollTo(0, window.scrollY>0?1:0);
 },{passive:true});
+if(!standalone){
+  const hideAddressBar=()=>{ if(document.documentElement.scrollHeight>innerHeight) window.scrollTo(0,1); };
+  window.addEventListener('load',()=>setTimeout(hideAddressBar,300));
+  window.addEventListener('pageshow',()=>setTimeout(hideAddressBar,300));
+  document.addEventListener('touchend',()=>setTimeout(hideAddressBar,60),{passive:true});
+  setTimeout(hideAddressBar,300);
+}
 
 /* 폭/높이 오차 허용치를 아무리 조정해도, 사파리가 주소창·탭바를 접었다 펴는 폭이
    기기·상황마다 달라서 숫자로는 확실히 못 걸러낸다.
