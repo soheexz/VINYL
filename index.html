@@ -511,12 +511,12 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
 .meta .t{font:700 31px/1.13 "SF Pro Display",system-ui;letter-spacing:-.028em;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
 /* 제목이 길어서 잘리면 전광판처럼 좌우로 훑어 보여준다 (JS 가 넘칠 때만 켠다) */
-.meta .t.marquee{text-overflow:clip;animation:titleMarquee var(--mq-dur,10s) ease-in-out infinite;}
-/* 왼쪽(처음)에서 오른쪽(끝)으로 죽 읽어가듯 흘렀다가, 되감듯 미끄러지지 않고
-   다시 왼쪽에서 나오게(리셋) 반복한다 — 왔다갔다 튕기지 않는 전광판 느낌 */
+.meta .t.marquee{text-overflow:clip;animation:titleMarquee var(--mq-dur,10s) linear infinite;}
+/* 오른쪽 바깥에서 들어와 왼쪽 바깥으로 완전히 흘러나간 뒤,
+   다시 오른쪽 바깥에서 나오는 전광판(순간 리셋, 왕복 없음) */
 @keyframes titleMarquee{
-  0%,8%{transform:translateX(0);}
-  88%,100%{transform:translateX(var(--mq-shift,0px));}
+  0%{transform:translateX(var(--mq-start,0px));}
+  100%{transform:translateX(var(--mq-end,0px));}
 }
 .meta .a{font-size:11.5px;color:rgba(255,255,255,.56);margin-top:10px;letter-spacing:.17em;
   text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -759,10 +759,11 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 /* LP 색 — 실제 판처럼 생긴 동그라미로 고른다 */
 /* LP 색 고르기.
    .menu button 이 폭 100%·안쪽 여백을 강제하므로, 선택자를 더 구체적으로 써서 눌러야 한다. */
-.menu .vrow{display:flex;align-items:center;gap:10px;padding:10px 13px 12px;}
+.menu .vrow{display:flex;flex-direction:column;align-items:stretch;gap:9px;padding:10px 13px 12px;}
 /* 판 가운데 원형 라벨(.lbl)과 이름이 겹치면 그 스타일을 물려받아
    메뉴 한가운데 어두운 타원이 생긴다. 반드시 다른 이름을 쓸 것. */
-.menu .vrow .vlbl{flex:1;font-size:13.5px;color:rgba(255,255,255,.9);white-space:nowrap;}
+.menu .vrow .vlbl{font-size:13.5px;color:rgba(255,255,255,.9);white-space:nowrap;}
+.menu .vrow .vswatches{display:flex;align-items:center;gap:10px;}
 .menu .vrow .swatch,
 .menu .vrow .swatch:active,
 .menu .vrow .swatch:hover{
@@ -796,14 +797,20 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 .menu .vrow .sw-auto{background:
   repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.34) 0 .6px, rgba(0,0,0,.22) .6px 1.7px),
   linear-gradient(140deg, var(--accent), rgba(255,255,255,.22));}
-/* 원하는 색을 직접 고르는 스와치 — 네이티브 컬러피커를 원 모양으로 눌러 맞춘다 */
-.menu .vrow .sw-custom{cursor:pointer;background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red);}
-.menu .vrow .sw-custom input[type="color"]{
-  -webkit-appearance:none;appearance:none;border:0;padding:0;background:none;cursor:pointer;
-  position:absolute;left:50%;top:50%;width:180%;height:180%;margin:-90% 0 0 -90%;
+/* 원하는 색을 직접 고르는 스와치 — 원 안엔 ? 표시만 보여주고,
+   실제 네이티브 컬러피커(input)는 투명하게 얹어서 탭하면 뜨게 한다 */
+.menu .vrow .sw-custom{
+  cursor:pointer;background:#2b2932;
+  display:flex;align-items:center;justify-content:center;
 }
-.menu .vrow .sw-custom input[type="color"]::-webkit-color-swatch-wrapper{padding:0;}
-.menu .vrow .sw-custom input[type="color"]::-webkit-color-swatch{border:0;}
+.menu .vrow .sw-custom::after{content:none;}   /* 가운데 스핀들 홀 대신 ? 를 보여준다 */
+.menu .vrow .sw-custom .qmark{
+  position:relative;z-index:1;font:800 13px/1 system-ui;color:rgba(255,255,255,.7);pointer-events:none;
+}
+.menu .vrow .sw-custom input[type="color"]{
+  -webkit-appearance:none;appearance:none;border:0;padding:0;cursor:pointer;opacity:0;
+  position:absolute;inset:0;width:100%;height:100%;
+}
 .chip{
   height:36px;padding:0 15px;border-radius:999px;display:flex;align-items:center;gap:7px;
   font-size:12px;font-weight:600;letter-spacing:.02em;
@@ -1085,14 +1092,18 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
     <hr>
     <button id="mDelete" class="warn"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4L10.6 10.6l6.3-6.3 1.4 1.4z" transform="translate(2.7 0)"/></svg></span>이 재생목록 삭제</button>
     <hr>
-    <div class="vrow"><span class="vlbl">LP 색</span>
-      <button class="swatch sw-black" data-v="black" aria-label="블랙" aria-pressed="false"></button>
-      <button class="swatch sw-white" data-v="white" aria-label="화이트" aria-pressed="false"></button>
-      <button class="swatch sw-clear" data-v="clear" aria-label="투명" aria-pressed="true"></button>
-      <button class="swatch sw-auto" data-v="auto" aria-label="앨범색" aria-pressed="false"></button>
-      <label class="swatch sw-custom" data-v="custom" aria-label="사용자 지정" aria-pressed="false">
-        <input type="color" id="vinylCustom" value="#1a5f38">
-      </label>
+    <div class="vrow">
+      <span class="vlbl">LP 색</span>
+      <div class="vswatches">
+        <button class="swatch sw-black" data-v="black" aria-label="블랙" aria-pressed="false"></button>
+        <button class="swatch sw-white" data-v="white" aria-label="화이트" aria-pressed="false"></button>
+        <button class="swatch sw-clear" data-v="clear" aria-label="투명" aria-pressed="true"></button>
+        <button class="swatch sw-auto" data-v="auto" aria-label="앨범색" aria-pressed="false"></button>
+        <label class="swatch sw-custom" data-v="custom" aria-label="사용자 지정" aria-pressed="false">
+          <input type="color" id="vinylCustom" value="#1a5f38">
+          <span class="qmark">?</span>
+        </label>
+      </div>
     </div>
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
@@ -1156,11 +1167,14 @@ const el={
    MutationObserver 로 텍스트가 바뀔 때마다 자동으로 넘치는지 검사한다. */
 function updateTitleMarquee(){
   el.title.classList.remove('marquee');
-  const overflow=el.title.scrollWidth-el.title.clientWidth;
-  if(overflow>4){
-    const shift=-(overflow+10);
-    el.title.style.setProperty('--mq-shift', shift+'px');
-    el.title.style.setProperty('--mq-dur', Math.max(6,Math.min(18,Math.abs(shift)/22)).toFixed(1)+'s');
+  const box=el.title.clientWidth, full=el.title.scrollWidth;
+  if(full-box>4){
+    // 첫 글자가 원래 시작하는 자리(0) 기준으로, 오른쪽 바깥에서 들어와 왼쪽 바깥으로 완전히
+    // 빠져나갈 때까지 흐르게 한다. 다 빠져나가면 다시 오른쪽 바깥에서 나온다(순간 리셋).
+    el.title.style.setProperty('--mq-start', box+'px');
+    el.title.style.setProperty('--mq-end', (-full)+'px');
+    const dist=box+full;
+    el.title.style.setProperty('--mq-dur', Math.max(6,Math.min(22,dist/70)).toFixed(1)+'s');
     el.title.classList.add('marquee');
   }
 }
