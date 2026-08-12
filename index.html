@@ -330,7 +330,10 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   border-radius:50%;
   overflow:hidden;      /* 스와이프 중 사각형 모서리가 비쳐 보이지 않도록 원형으로 확실히 자른다 */
   transition:opacity .5s ease, transform .6s cubic-bezier(.2,.8,.25,1);
-  filter:drop-shadow(0 30px 60px rgba(0,0,0,.55));
+  /* filter:drop-shadow 는 일부 기기에서 알파 모양 대신 사각형 바운딩박스를 기준으로
+     그림자를 그려서, 판 뒤로 배경과 다른 색의 네모가 비쳐 보이는 원인이 됐다.
+     box-shadow는 border-radius를 항상 그대로 따르므로 원형으로 확실하게 그려진다 */
+  box-shadow:0 30px 60px rgba(0,0,0,.55);
   touch-action:none;   /* 좌우 스와이프를 브라우저에 뺏기지 않도록 미리 막는다 */
 }
 .disc.hide{opacity:0;transform:scale(.9);}
@@ -624,6 +627,11 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
 .gcell.grabbed.moving{transition:none !important;}
 .gcell::before{content:"";display:block;padding-top:100%;}   /* 첫 프레임부터 정사각형 보장 */
 .gcell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+/* 썸네일을 아예 못 찾아서 앱 아이콘으로 대신 채운 경우 — 사진처럼 꽉 채우지 않고 로고처럼 보이게 */
+.gcell img.fallback-icon,
+.rail .front img.fallback-icon{
+  object-fit:contain;padding:22%;background:#0d0d10;box-sizing:border-box;
+}
 .gcell.on{box-shadow:0 0 0 3px var(--accent), 0 20px 40px -10px rgba(0,0,0,.8);}
 /* 아이패드에는 hover 가 없다 — 제목은 항상 보이되 은은하게 */
 .gcell .gt{
@@ -1944,6 +1952,11 @@ function parseInput(raw){
    정사각형으로 잘라도 띠가 그대로 남는다. maxres(1280x720) 와 mq(320x180) 만 띠가 없다. */
 const thumbFor=id=>'https://i.ytimg.com/vi/'+id+'/maxresdefault.jpg';
 const thumbAlt=id=>'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg';
+/* 썸네일이 아예 없는 영상(삭제·비공개 등)은 저화질판도 깨진 이미지로 뜬다.
+   그마저 실패하면 앱 아이콘으로 확실히 채운다 */
+function thumbFallbackAttr(id){
+  return `onerror="this.onerror=function(){this.onerror=null;this.src='icon-512.png';this.classList.add('fallback-icon');};this.src='${thumbAlt(id)}'"`;
+}
 
 async function fetchMeta(id){
   try{
@@ -2006,9 +2019,8 @@ function handleAdd(){
   const raw=$('#url').value.trim();
   if(!raw){ toast('유튜브 링크를 붙여넣어 주세요'); return; }
   const p=parseInput(raw);
-  $('#url').value=''; $('#url').blur();
-  $('#topbar').classList.remove('on');
-  $('#chipAdd').setAttribute('aria-pressed',false);
+  $('#url').value='';
+  closeBar();
   if(p.videos.length){
     const n=addVideos(p.videos);
     toast(n?n+'장의 LP를 넣었어요':'이미 크레이트에 있어요');
@@ -2058,7 +2070,7 @@ function railHTML(){
         <div class="top"><span>${esc(ell(cleanTitle(it.title)||'Untitled',22))}</span></div>
         <div class="front">
           <img src="${it.thumb}" loading="lazy" alt="" draggable="false"
-               onerror="this.onerror=null;this.src='${thumbAlt(it.id)}'">
+               ${thumbFallbackAttr(it.id)}>
           <div class="eq"><i></i><i></i><i></i></div>
         </div>
         <div class="delmark">×</div>
@@ -2177,7 +2189,7 @@ function gridHTML(){
   return crate.map((it,i)=>`
     <div class="gcell" data-i="${i}" data-id="${it.id}">
       <img src="${it.thumb}" loading="lazy" alt="" draggable="false"
-           onerror="this.onerror=null;this.src='${thumbAlt(it.id)}'">
+           ${thumbFallbackAttr(it.id)}>
       <div class="geq"><i></i><i></i><i></i></div>
       <div class="gt">${esc(cleanTitle(it.title)||'제목 없음')}</div>
       <button class="gdel" data-del="${i}" aria-label="삭제">×</button>
@@ -2764,11 +2776,21 @@ function openBar(focus){
   $('#chipAdd').setAttribute('aria-pressed',true);
   if(focus && !isFullscreen()) setTimeout(()=>$('#url').focus(),60);
 }
+function closeBar(){
+  $('#topbar').classList.remove('on');
+  document.body.classList.remove('baron');
+  $('#chipAdd').setAttribute('aria-pressed',false);
+  $('#url').blur();
+}
+/* 입력창 바깥 배경을 누르면 취소하고 닫는다 — 붙여넣기하다 마음이 바뀌었을 때 */
+document.addEventListener('click',e=>{
+  if(!$('#topbar').classList.contains('on')) return;
+  if(e.target.closest('#topbar,#chipAdd')) return;
+  closeBar();
+});
 $('#chipAdd').addEventListener('click',async function(){
   if($('#topbar').classList.contains('on')){       // 열려 있으면 닫기
-    $('#topbar').classList.remove('on');
-    document.body.classList.remove('baron');
-    this.setAttribute('aria-pressed',false);
+    closeBar();
     return;
   }
   let txt='';
