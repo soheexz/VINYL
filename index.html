@@ -1566,10 +1566,19 @@ function setLabel(item){
     const img=new Image();
     img.draggable=false;
     // 유튜브 썸네일을 못 불러오면(삭제된 영상 등) 생성 아트 대신 앱 아이콘을 보여준다 —
-    // 링크는 붙였는데 이미지가 안 나오는 상황이라는 걸 바로 알아보게
-    img.onerror=()=>{ el.lbl.innerHTML=appIconLabel(); };
+    // 링크는 붙였는데 이미지가 안 나오는 상황이라는 걸 바로 알아보게.
+    // 에러도 안 나고 그냥 멈춰버리는 경우(느린 서버·CORS 등)까지 대비해 시간제한도 둔다.
+    let settled=false;
+    const fallback=()=>{
+      if(settled||lblKey!==key) return;
+      settled=true;
+      el.lbl.innerHTML=appIconLabel();
+    };
+    img.onload=()=>{ settled=true; };
+    img.onerror=fallback;
     img.src=src;
     el.lbl.innerHTML=''; el.lbl.appendChild(img);
+    setTimeout(fallback,4500);
   } else {
     el.lbl.innerHTML=labelSVG(item);
   }
