@@ -813,17 +813,17 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 body.gridview #ytwrap{opacity:0;pointer-events:none;transform:scale(.8);}
 /* 완전히 숨기기 — iframe 은 소리의 출처라 지우면 안 되고, 보이지만 않게 한다.
    display:none 으로 만들면 재생이 멈춘다. */
-/* 광고로 보이는 동안에는 숨김 설정이어도 화면을 띄운다 */
-body.ythide.adshow #ytwrap{
-  width:220px;height:auto;aspect-ratio:16/9;opacity:1;pointer-events:auto;
+/* 숨김 설정이어도 광고로 보이는 동안엔 화면을 띄운다.
+   크기·위치는 광고 여부와 무관하게 항상 이 값으로 고정해 두고 opacity/pointer-events만 바꾼다 —
+   광고 감지 타이머(adWatch)가 재생을 시작할 때마다 1.2초 간격으로 몇 초씩 이 클래스를 토글하는데,
+   그때마다 실제 가로/세로/위치가 바뀌면(리플로우) 화면 전체가 다시 배치되며 톤암이 튀는 원인이 됐다. */
+body.ythide #ytwrap{
+  width:220px;height:auto;aspect-ratio:16/9;
   left:calc(var(--railbase) + 26px);top:calc(env(safe-area-inset-top) + 16px);bottom:auto;
+  opacity:0;pointer-events:none;transform:none;
   box-shadow:0 12px 30px rgba(0,0,0,.6), 0 0 0 2px var(--accent);
 }
-body.ythide #ytwrap{
-  width:1px;height:1px;min-width:0;aspect-ratio:auto;
-  opacity:0;pointer-events:none;box-shadow:none;transform:none;
-  left:0;top:auto;bottom:0;
-}
+body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
 #ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 
 /* ---- 앱 안에서 처리하는 입력 창 (시스템 prompt/confirm 은 전체 화면을 깬다) ---- */
@@ -924,7 +924,8 @@ body.ythide #ytwrap{
   .gcell .gt{font-size:11px;padding:28px 10px 9px;}
   /* 코너 버튼(추가·편집·⋯) 아래로 옮긴다 — 랙 오른쪽 빈자리 기준 위치를 그대로 두면 코너 버튼과 겹친다 */
   #ytwrap{left:auto;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 40px);width:104px;transform:none;transform-origin:100% 0%;}
-  body.ythide.adshow #ytwrap{left:auto;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 40px);width:168px;}
+  /* 숨김 상태에서는 광고 여부와 무관하게 크기·위치를 고정하고 opacity만 바꾼다 (리플로우로 톤암이 튀는 것 방지) */
+  body.ythide #ytwrap{left:auto;right:10px;top:calc(max(10px,env(safe-area-inset-top)) + 40px);width:168px;}
   .switcher{bottom:calc(env(safe-area-inset-bottom) + 6px);}
   .modal .card{width:min(340px,86vw);padding:20px;}
 }
