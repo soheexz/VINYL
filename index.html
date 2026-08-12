@@ -763,7 +763,7 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 /* 판 가운데 원형 라벨(.lbl)과 이름이 겹치면 그 스타일을 물려받아
    메뉴 한가운데 어두운 타원이 생긴다. 반드시 다른 이름을 쓸 것. */
 .menu .vrow .vlbl{font-size:13.5px;color:rgba(255,255,255,.9);white-space:nowrap;}
-.menu .vrow .vswatches{display:flex;align-items:center;gap:10px;}
+.menu .vrow .vswatches{display:flex;flex-wrap:wrap;align-items:center;gap:9px 10px;}
 .menu .vrow .swatch,
 .menu .vrow .swatch:active,
 .menu .vrow .swatch:hover{
@@ -797,31 +797,24 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 .menu .vrow .sw-auto{background:
   repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.34) 0 .6px, rgba(0,0,0,.22) .6px 1.7px),
   linear-gradient(140deg, var(--accent), rgba(255,255,255,.22));}
-/* 원하는 색을 직접 고르는 스와치 — 무지개 테두리 + 스포이드 아이콘으로 "색 고르기"를 나타내고,
-   실제 네이티브 컬러피커(input)는 투명하게 얹어서 탭하면 뜨게 한다 */
-.menu .vrow .sw-custom{
-  cursor:pointer;
-  background:conic-gradient(from 200deg, #ff8a7a, #c98bf5, #6fd6c8, #ff8a7a);
-  display:flex;align-items:center;justify-content:center;
-  transform:none !important;                  /* 다른 스와치처럼 골라도 튀어 오르지 않는다 */
-}
-.menu .vrow .sw-custom::after{                 /* 스핀들 홀 대신, 안쪽에 어두운 원을 깔아 테두리만 보이게 */
-  content:"";position:absolute;inset:3px;margin:0;width:auto;height:auto;
-  border-radius:50%;background:#201f26;box-shadow:none;
-}
-.menu .vrow .sw-custom .qmark{
-  position:relative;z-index:1;width:14px;height:14px;fill:rgba(255,255,255,.82);pointer-events:none;
-}
-.menu .vrow .sw-custom input[type="color"]{
-  -webkit-appearance:none;appearance:none;border:0;padding:0;cursor:pointer;opacity:0;outline:none;
-  position:absolute;inset:0;width:100%;height:100%;
-}
-/* 이 스와치는 골라도 다른 것들처럼 커지지 않는다 — 링 자체가 이미 알록달록해서
-   튀어 오르면 산만하다. 선택 표시는 얇은 강조 테두리로만 준다 */
-.menu .vrow .sw-custom[aria-pressed="true"]{
-  transform:none !important;
-  box-shadow:0 0 0 2px rgba(255,255,255,.55), 0 3px 10px rgba(0,0,0,.55);
-}
+.menu .vrow .sw-red{background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.30) 0 .6px, rgba(0,0,0,.30) .6px 1.7px),
+  radial-gradient(circle at 36% 30%, #ff6a5a, #b3261a 80%);}
+.menu .vrow .sw-orange{background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.30) 0 .6px, rgba(0,0,0,.28) .6px 1.7px),
+  radial-gradient(circle at 36% 30%, #ffa64d, #c65e00 80%);}
+.menu .vrow .sw-yellow{background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.34) 0 .6px, rgba(0,0,0,.22) .6px 1.7px),
+  radial-gradient(circle at 36% 30%, #ffe066, #d9a80c 80%);}
+.menu .vrow .sw-dgreen{background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 0 .6px, rgba(0,0,0,.34) .6px 1.7px),
+  radial-gradient(circle at 36% 30%, #2f8a5c, #123c26 80%);}
+.menu .vrow .sw-dblue{background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 0 .6px, rgba(0,0,0,.34) .6px 1.7px),
+  radial-gradient(circle at 36% 30%, #2f5aa8, #122544 80%);}
+.menu .vrow .sw-dpurple{background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 0 .6px, rgba(0,0,0,.34) .6px 1.7px),
+  radial-gradient(circle at 36% 30%, #8b4fc4, #351c50 80%);}
 .chip{
   height:36px;padding:0 15px;border-radius:999px;display:flex;align-items:center;gap:7px;
   font-size:12px;font-weight:600;letter-spacing:.02em;
@@ -1110,16 +1103,16 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
         <button class="swatch sw-white" data-v="white" aria-label="화이트" aria-pressed="false"></button>
         <button class="swatch sw-clear" data-v="clear" aria-label="투명" aria-pressed="true"></button>
         <button class="swatch sw-auto" data-v="auto" aria-label="앨범색" aria-pressed="false"></button>
-        <label class="swatch sw-custom" data-v="custom" aria-label="사용자 지정" aria-pressed="false">
-          <input type="color" id="vinylCustom" value="#1a5f38">
-          <svg class="qmark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12a1 1 0 0 0 0-1.42zM6.92 19H5v-1.92l8.06-8.06 1.92 1.92z"/></svg>
-        </label>
+        <button class="swatch sw-red" data-v="red" aria-label="빨강" aria-pressed="false"></button>
+        <button class="swatch sw-orange" data-v="orange" aria-label="주황" aria-pressed="false"></button>
+        <button class="swatch sw-yellow" data-v="yellow" aria-label="노랑" aria-pressed="false"></button>
+        <button class="swatch sw-dgreen" data-v="dgreen" aria-label="진초록" aria-pressed="false"></button>
+        <button class="swatch sw-dblue" data-v="dblue" aria-label="진파랑" aria-pressed="false"></button>
+        <button class="swatch sw-dpurple" data-v="dpurple" aria-label="진보라" aria-pressed="false"></button>
       </div>
     </div>
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
-    <div style="padding:8px 13px 4px;font:500 10px/1.4 ui-monospace,Menlo,monospace;
-                color:rgba(255,255,255,.35);letter-spacing:.04em">build r56</div>
   </div>
   <div class="menu" id="chooser"></div>
   <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
@@ -3167,45 +3160,35 @@ function dbgShow(on){
   else toast('진단 표시 꺼짐');
 }
 
-/* LP 색 — 블랙 / 화이트 / 클리어 / 앨범색 / 직접 고르기 */
+/* LP 색 — 블랙 / 화이트 / 클리어 / 앨범색 / 고정 프리셋 6가지 */
 const VKEY='vinyl_color';
-const VCKEY='vinyl_customhex';
-const VNAMES={black:'블랙', white:'화이트', clear:'투명', auto:'앨범색', custom:'커스텀'};
+const VNAMES={black:'블랙', white:'화이트', clear:'투명', auto:'앨범색',
+  red:'빨강', orange:'주황', yellow:'노랑', dgreen:'진초록', dblue:'진파랑', dpurple:'진보라'};
+const PRESET_HEX={red:'#e5352a', orange:'#f0801e', yellow:'#f2c40c',
+  dgreen:'#1a5f38', dblue:'#1e3f75', dpurple:'#5a2a86'};
 let vinylColor='clear';        // 기본은 투명 바이닐
-let customHex='#1a5f38';
-try{ customHex=localStorage.getItem(VCKEY)||customHex; }catch(e){}
-const customInput=$('#vinylCustom');
-if(customInput) customInput.value=customHex;
 function setVinyl(c,save){
   vinylColor=VNAMES[c]?c:'clear';
-  document.body.classList.remove('vinyl-white','vinyl-clear','vinyl-auto','vinyl-custom');
-  // 앨범색·직접 고른 색은 인라인 변수로 칠하므로, 다른 색으로 바꿀 땐 지워 준다
+  document.body.classList.remove('vinyl-white','vinyl-clear','vinyl-auto');
+  // 앨범색·프리셋 색은 인라인 변수로 칠하므로, 다른 색으로 바꿀 땐 지워 준다
   ['--v1','--v2','--v3','--v4','--v5','--dw1','--dw2','--gr-hi','--gr-lo',
    '--bd-hi','--bd-lo','--v-edge','--v-shade','--sheen-op']
     .forEach(k=>document.documentElement.style.removeProperty(k));
-  if(vinylColor!=='black') document.body.classList.add('vinyl-'+vinylColor);
+  if(vinylColor==='white'||vinylColor==='clear'||vinylColor==='auto')
+    document.body.classList.add('vinyl-'+vinylColor);
   if(vinylColor==='auto'){
     const cur=crate[current]||crate[0];
     if(cur&&cur.thumb) dominantColor(cur.thumb).then(applyAccent);
     else tintVinyl(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
   }
-  if(vinylColor==='custom') tintVinyl(customHex);
+  if(PRESET_HEX[vinylColor]) tintVinyl(PRESET_HEX[vinylColor]);
   document.querySelectorAll('.swatch').forEach(s=>
     s.setAttribute('aria-pressed', s.dataset.v===vinylColor));
   if(save!==false){ try{ localStorage.setItem(VKEY,vinylColor); }catch(e){} }
 }
-if(customInput){
-  customInput.addEventListener('input',()=>{
-    customHex=customInput.value;
-    try{ localStorage.setItem(VCKEY,customHex); }catch(e){}
-    // 색을 고르는 중에는 바로 미리 보여준다 — 스와치를 따로 안 눌러도 골랐으면 그 색을 쓴다
-    if(vinylColor!=='custom') setVinyl('custom');
-    else tintVinyl(customHex);
-  });
-}
 document.querySelector('.vrow').addEventListener('click',e=>{
   const s=e.target.closest('.swatch');
-  if(s && s.dataset.v!=='custom') setVinyl(s.dataset.v);
+  if(s) setVinyl(s.dataset.v);
 });
 try{ setVinyl(localStorage.getItem(VKEY)||'clear', false); }catch(e){ setVinyl('clear',false); }
 
@@ -3293,11 +3276,19 @@ window.addEventListener('scroll',()=>{
   if(window.scrollX || window.scrollY>2 || window.scrollY<0) window.scrollTo(0, window.scrollY>0?1:0);
 },{passive:true});
 if(!standalone){
-  const hideAddressBar=()=>{ if(document.documentElement.scrollHeight>innerHeight) window.scrollTo(0,1); };
+  const hideAddressBar=()=>{
+    if(document.documentElement.scrollHeight>innerHeight && window.scrollY<1) window.scrollTo(0,1);
+  };
+  // 첫 시도가 이미지·레이아웃이 덜 자리잡은 상태라 사파리가 무시하는 경우가 있어
+  // 로드 직후 몇 차례 더 시도한다
+  [50,200,400,700,1100,1600,2200].forEach(ms=>setTimeout(hideAddressBar,ms));
   window.addEventListener('load',()=>setTimeout(hideAddressBar,300));
   window.addEventListener('pageshow',()=>setTimeout(hideAddressBar,300));
+  // 터치가 시작되는 순간 바로(딜레이 없이) 시도 — 실제 스크롤 제스처와 더 가깝게 묶인다
+  document.addEventListener('touchstart',hideAddressBar,{passive:true});
+  document.addEventListener('touchmove',hideAddressBar,{passive:true});
   document.addEventListener('touchend',()=>setTimeout(hideAddressBar,60),{passive:true});
-  setTimeout(hideAddressBar,300);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(hideAddressBar,150); });
 }
 
 /* 폭/높이 오차 허용치를 아무리 조정해도, 사파리가 주소창·탭바를 접었다 펴는 폭이
