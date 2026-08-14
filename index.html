@@ -527,10 +527,16 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   text-shadow:0 2px 14px rgba(0,0,0,.65);
   transition:opacity .25s, transform .46s cubic-bezier(.16,.84,.28,1);
 }
+/* 제목 박스(.tbox)는 화면에 고정된 채 잘라내는 창 역할만 하고, 실제 글자(.t)를
+   그 안에서 옆으로 움직인다. 예전엔 잘라내는 요소 자신에 transform을 줘서 —
+   창이 글자와 같이 움직여 왼쪽 배경 바깥까지 새어나가 보였다. */
+.meta .tbox{overflow:hidden;}
 .meta .t{font:700 31px/1.13 "SF Pro Display",system-ui;letter-spacing:-.028em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;
+  max-width:100%;vertical-align:top;}
 /* 제목이 길어서 잘리면 전광판처럼 좌우로 훑어 보여준다 (JS 가 넘칠 때만 켠다) */
-.meta .t.marquee{text-overflow:clip;animation:titleMarquee var(--mq-dur,10s) linear infinite;}
+.meta .t.marquee{overflow:visible;text-overflow:clip;max-width:none;width:max-content;
+  animation:titleMarquee var(--mq-dur,10s) linear infinite;}
 /* 유튜브 뮤직처럼: 제목이 바뀌면 항상 처음 글자부터 바로 읽히게 제자리에서 시작해
    잠깐 멈춰 있다가, 끝까지 흘러가서 다시 잠깐 멈춘 뒤 제자리로 순간 리셋한다.
    (예전엔 화면 밖 오른쪽에서 흘러 들어오기 시작해 제목 앞부분을 놓치고 봐야 했다) */
@@ -1060,7 +1066,7 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
     </div>
 
     <div class="meta">
-      <div class="t" id="pTitle">판을 올려 주세요</div>
+      <div class="tbox" id="pTitleBox"><div class="t" id="pTitle">판을 올려 주세요</div></div>
       <div class="a" id="pArtist">NONE</div>
       <div class="tm" id="pTime">0:00 / 0:00</div>
     </div>
@@ -1186,7 +1192,7 @@ const $=s=>document.querySelector(s);
 const el={
   bg:$('#bg'), bg2:$('#bg2'), disc:$('#disc'), spin:$('#spin'), lbl:$('#lbl'),
   photo:$('#discPhoto'), arm:$('#arm'), tube:$('#armTube'), head:$('#armHead'), pad:$('#armpad'),
-  title:$('#pTitle'), artist:$('#pArtist'), time:$('#pTime'),
+  title:$('#pTitle'), titleBox:$('#pTitleBox'), artist:$('#pArtist'), time:$('#pTime'),
   fill:$('#progFill'), play:$('#bPlay'), prev:$('#bPrev'), next:$('#bNext'),
   icPlay:$('#icPlay'), icPause:$('#icPause'),
   gwrap:$('#gwrap'),
@@ -1200,7 +1206,7 @@ const el={
    MutationObserver 로 텍스트가 바뀔 때마다 자동으로 넘치는지 검사한다. */
 function updateTitleMarquee(){
   el.title.classList.remove('marquee');
-  const box=el.title.clientWidth, full=el.title.scrollWidth;
+  const box=el.titleBox.clientWidth, full=el.title.scrollWidth;
   if(full-box>4){
     // 제자리(글자 맨 앞)에서 시작해 왼쪽 바깥으로 완전히 빠져나갈 때까지 흐른다.
     // 앞뒤로 잠깐 멈추는 시간은 keyframe(0~10%, 90~100%)이 담당하므로 여기선 여유를 더해준다.
