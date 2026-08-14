@@ -746,14 +746,14 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
   position:absolute;top:max(18px,calc(env(safe-area-inset-top) + 10px));left:50%;transform:translateX(-50%);
   /* 안쪽 칩과의 여백은 사방 3px. 바깥 알약 높이(36px)는 오른쪽 코너 버튼(.chip)과
      같아야 정렬이 맞으므로 건드리지 않고, 안쪽 칩을 30px 로 잡아 위아래 3px 을 만든다 */
-  display:flex;align-items:center;gap:6px;height:36px;padding:0 3px;border-radius:999px;z-index:19;max-width:46vw;
+  display:flex;align-items:center;gap:6px;height:42px;padding:0 4px;border-radius:999px;z-index:19;max-width:46vw;
   background:rgba(22,20,26,.8);
   box-shadow:0 8px 24px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.14);
   overflow-x:auto;-webkit-overflow-scrolling:touch;
 }
 .crates::-webkit-scrollbar{display:none;}
 .cratechip{
-  flex:none;height:30px;padding:0 15px;border-radius:999px;white-space:nowrap;
+  flex:none;height:34px;padding:0 15px;border-radius:999px;white-space:nowrap;
   font-size:12.5px;font-weight:600;letter-spacing:-.01em;color:rgba(255,255,255,.62);
   display:flex;align-items:center;gap:7px;transition:.2s;
 }
@@ -772,7 +772,7 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 
 /* ---- 메뉴 ---- */
 .menu{
-  position:absolute;top:calc(max(18px,calc(env(safe-area-inset-top) + 10px)) + 46px);right:20px;z-index:40;
+  position:absolute;top:calc(max(18px,calc(env(safe-area-inset-top) + 10px)) + 52px);right:20px;z-index:40;
   width:248px;padding:7px;border-radius:16px;
   /* 항목이 늘어나 화면보다 길어지면 아래쪽(예: 유튜브 로그인)이 잘려서 아예 안 보이던 문제 —
      최대 높이를 화면에 맞게 제한하고 넘치면 안에서 스크롤되게 한다.
@@ -801,7 +801,7 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 .menu hr{border:0;height:1px;background:rgba(255,255,255,.1);margin:6px 9px;}
 .menu .ic{width:18px;height:18px;flex:none;opacity:.78;display:flex;align-items:center;justify-content:center;}
 .menu .ic svg{width:17px;height:17px;fill:currentColor;display:block;}
-.chip svg{width:15px;height:15px;fill:currentColor;display:block;}
+.chip svg{width:14px;height:14px;fill:currentColor;display:block;}
 .chip{gap:6px;}
 .railtoggle svg{width:13px;height:13px;fill:currentColor;display:block;}
 .cratechip.newc svg{width:14px;height:14px;fill:currentColor;}
@@ -866,7 +866,7 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
   repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 0 .6px, rgba(0,0,0,.34) .6px 1.7px),
   radial-gradient(circle at 36% 30%, #8b4fc4, #351c50 80%);}
 .chip{
-  height:36px;padding:0 15px;border-radius:999px;display:flex;align-items:center;gap:7px;
+  height:42px;padding:0 15px;border-radius:999px;display:flex;align-items:center;gap:7px;
   font-size:12px;font-weight:600;letter-spacing:.02em;
   background:rgba(22,20,26,.82);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.16);color:rgba(255,255,255,.82);transition:.2s;
@@ -978,7 +978,7 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
   .railtoggle{left:172px;}
   /* 곡 제목을 판 아래(하단)가 아니라 상단 재생목록 칩 바로 밑으로 옮겨서
      판·컨트롤과 겹치지 않게 한다. 판과 재생 버튼 줄은 그만큼 아래로 내린다 */
-  .meta{left:16px;right:16px;top:calc(max(10px,calc(env(safe-area-inset-top) + 10px)) + 60px);
+  .meta{left:16px;right:16px;top:calc(max(10px,calc(env(safe-area-inset-top) + 10px)) + 66px);
         bottom:auto;max-width:none;}
   .meta .t{font:700 20px/1.2 "SF Pro Display",system-ui;}
   .meta .a{font-size:10.5px;margin-top:6px;}
@@ -991,22 +991,22 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
   /* 상단 재생목록 칩과 우측 코너 버튼이 겹치지 않도록,
      가운데 정렬을 풀고 좌측에 붙인 뒤 폭도 좁힌다 */
   /* 폰도 여백 사방 3px — 알약 높이 30px 은 코너 버튼과 맞춰야 하므로 그대로 두고 칩을 24px 로 */
-  .crates{left:16px;right:auto;transform:none;max-width:42vw;height:30px;padding:0 3px;
+  .crates{left:16px;right:auto;transform:none;max-width:42vw;height:36px;padding:0 4px;
           top:max(10px,calc(env(safe-area-inset-top) + 10px));
           transition:opacity .2s;}
   /* 선반이 열리면 같은 자리(왼쪽)를 뒤덮으므로, 재생목록 칩은 선반이 닫혀 있을 때만 보여준다 */
   body:not(.railoff) .crates{opacity:0;pointer-events:none;}
-  .cratechip{height:24px;padding:0 12px;font-size:11.5px;}
+  .cratechip{height:28px;padding:0 12px;font-size:11.5px;}
   .corner{right:10px;top:max(10px,calc(env(safe-area-inset-top) + 10px));gap:4px;}
-  .chip{height:30px;padding:0 9px;font-size:10.5px;gap:5px;}
+  .chip{height:36px;padding:0 11px;font-size:11.5px;gap:5px;}
   #gridView{padding:calc(env(safe-area-inset-top) + 58px) 16px 96px;}
   .gcell{border-radius:8px;}
   .gcell .gt{font-size:11px;padding:28px 10px 9px;}
   /* 코너 버튼(추가·편집·⋯) 아래로 옮긴다 — 랙 오른쪽 빈자리 기준 위치를 그대로 두면 코너 버튼과 겹친다 */
-  #ytwrap{left:auto;right:10px;top:calc(max(10px,calc(env(safe-area-inset-top) + 10px)) + 40px);width:104px;transform:none;transform-origin:100% 0%;}
+  #ytwrap{left:auto;right:10px;top:calc(max(10px,calc(env(safe-area-inset-top) + 10px)) + 46px);width:104px;transform:none;transform-origin:100% 0%;}
   /* 폰에서는 로그인 화면을 실제로 조작할 수 있을 만큼 크게 — 오른쪽 위를 기준으로 커져서 화면 안에 머문다 */
   /* 숨김 상태에서는 광고 여부와 무관하게 크기·위치를 고정하고 opacity만 바꾼다 (리플로우로 톤암이 튀는 것 방지) */
-  body.ythide #ytwrap{left:auto;right:10px;top:calc(max(10px,calc(env(safe-area-inset-top) + 10px)) + 40px);width:168px;}
+  body.ythide #ytwrap{left:auto;right:10px;top:calc(max(10px,calc(env(safe-area-inset-top) + 10px)) + 46px);width:168px;}
   .switcher{bottom:calc(env(safe-area-inset-bottom) + 6px);}
   .modal .card{width:min(340px,86vw);padding:20px;}
 }
