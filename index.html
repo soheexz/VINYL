@@ -2974,7 +2974,8 @@ document.addEventListener('click',e=>{
   if(e.target.closest('.gcell,.lp,.corner,.crates,.menu,#chooser,#switcher,.pills,.modal,.railtoggle,#topbar,#ytwrap')) return;
   setEditing(false);
 });
-$('#ytwrap').addEventListener('click',function(){ this.classList.toggle('big'); });
+// click 은 iframe을 품은 요소에서 사파리가 잘 안 쏴 주는 경우가 있어 pointerdown으로 잡는다
+$('#ytwrap').addEventListener('pointerdown',function(){ this.classList.toggle('big'); });
 
 el.play.addEventListener('click',togglePlay);
 el.next.addEventListener('click',next);
