@@ -744,16 +744,16 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 /* ---- 크레이트(재생목록) 전환 바 ---- */
 .crates{
   position:absolute;top:max(18px,calc(env(safe-area-inset-top) + 10px));left:50%;transform:translateX(-50%);
-  /* 안쪽 칩(32px)과 바깥 알약(36px)의 위아래 여백이 2px 이므로 좌우도 2px 로 맞춘다.
-     예전엔 좌우만 5px 이라 왼쪽이 유독 넓어 보였다 */
-  display:flex;align-items:center;gap:6px;height:36px;padding:0 2px;border-radius:999px;z-index:19;max-width:46vw;
+  /* 안쪽 칩과의 여백은 사방 3px. 바깥 알약 높이(36px)는 오른쪽 코너 버튼(.chip)과
+     같아야 정렬이 맞으므로 건드리지 않고, 안쪽 칩을 30px 로 잡아 위아래 3px 을 만든다 */
+  display:flex;align-items:center;gap:6px;height:36px;padding:0 3px;border-radius:999px;z-index:19;max-width:46vw;
   background:rgba(22,20,26,.8);
   box-shadow:0 8px 24px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.14);
   overflow-x:auto;-webkit-overflow-scrolling:touch;
 }
 .crates::-webkit-scrollbar{display:none;}
 .cratechip{
-  flex:none;height:32px;padding:0 15px;border-radius:999px;white-space:nowrap;
+  flex:none;height:30px;padding:0 15px;border-radius:999px;white-space:nowrap;
   font-size:12.5px;font-weight:600;letter-spacing:-.01em;color:rgba(255,255,255,.62);
   display:flex;align-items:center;gap:7px;transition:.2s;
 }
@@ -990,13 +990,13 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
   .pill svg{width:18px;height:18px;} .pill.main svg{width:23px;height:23px;}
   /* 상단 재생목록 칩과 우측 코너 버튼이 겹치지 않도록,
      가운데 정렬을 풀고 좌측에 붙인 뒤 폭도 좁힌다 */
-  /* 폰에서는 알약 30px · 칩 28px 이라 위아래 여백이 1px — 좌우도 1px 로 맞춘다 */
-  .crates{left:16px;right:auto;transform:none;max-width:42vw;height:30px;padding:0 1px;
+  /* 폰도 여백 사방 3px — 알약 높이 30px 은 코너 버튼과 맞춰야 하므로 그대로 두고 칩을 24px 로 */
+  .crates{left:16px;right:auto;transform:none;max-width:42vw;height:30px;padding:0 3px;
           top:max(10px,calc(env(safe-area-inset-top) + 10px));
           transition:opacity .2s;}
   /* 선반이 열리면 같은 자리(왼쪽)를 뒤덮으므로, 재생목록 칩은 선반이 닫혀 있을 때만 보여준다 */
   body:not(.railoff) .crates{opacity:0;pointer-events:none;}
-  .cratechip{height:28px;padding:0 12px;font-size:11.5px;}
+  .cratechip{height:24px;padding:0 12px;font-size:11.5px;}
   .corner{right:10px;top:max(10px,calc(env(safe-area-inset-top) + 10px));gap:4px;}
   .chip{height:30px;padding:0 9px;font-size:10.5px;gap:5px;}
   #gridView{padding:calc(env(safe-area-inset-top) + 58px) 16px 96px;}
