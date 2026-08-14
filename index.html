@@ -1207,6 +1207,8 @@ let crate=[], current=-1, player=null, ready=false, playing=false, poll=null, vi
 // 새 영상을 불러오는 중엔 false — onStateChange가 실제 전환을 확인해줄 때까지
 // 진행률 폴링이 이전 곡의 currentTime/duration으로 톤암을 갱신하지 못하게 막는다
 let armSynced=true;
+// 재생 불가 곡에서 자동으로 다음 곡으로 넘기는 타이머 — 새 곡을 틀면 취소한다
+let errSkipT=null;
 const $=s=>document.querySelector(s);
 const el={
   bg:$('#bg'), bg2:$('#bg2'), disc:$('#disc'), spin:$('#spin'), lbl:$('#lbl'),
@@ -1824,7 +1826,12 @@ window.onYouTubeIframeAPIReady=function(){
         // 넘어갔다는 확실한 신호 — 이때만 currentTime/duration 을 믿어도 된다고 표시한다.
         // (video_id 만 보고 판단하면, video_id는 먼저 바뀌고 currentTime/duration은
         // 아직 이전 곡 값을 들고 있는 짧은 틈이 있어 톤암이 튀는 게 여전히 남아 있었다)
-        if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.BUFFERING||e.data===YT.PlayerState.CUED){
+        /* BUFFERING 은 너무 이르다 — 그 시점엔 video_id 만 새 곡으로 바뀌고
+           duration/currentTime 은 아직 이전 곡 값을 들고 있어서, 여기서 믿어 버리면
+           이전 곡 길이로 톤암 위치를 계산해 좌우로 튄다(실제로 재현 확인:
+           제목은 song A인데 길이가 song C의 4:42로 표시됐다).
+           실제로 재생이 시작됐거나(PLAYING) 큐잉이 끝난(CUED) 뒤에만 믿는다. */
+        if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.CUED){
           const vd=player.getVideoData&&player.getVideoData(), it=crate[current];
           if(!it||!vd||vd.video_id===it.id) armSynced=true;
         }
@@ -1842,7 +1849,12 @@ window.onYouTubeIframeAPIReady=function(){
                  101:'외부 재생이 차단된 영상이에요',150:'외부 재생이 차단된 영상이에요',
                  153:'재생이 차단됐어요 — http 주소로 열어 주세요'};
         toast(m[e.data]||('재생 오류 (코드 '+e.data+')'));
-        setTimeout(()=>{ if(crate.length>1) next(); },1400);
+        /* 재생 못 하는 곡에서 1.4초 뒤 자동으로 다음 곡으로 넘긴다.
+           예전엔 이 타이머를 취소하지 않아, 그 사이 사용자가 직접 곡을 넘기면
+           묵은 타이머가 나중에 또 터져 한 번에 두 곡이 넘어가고 화면과 플레이어가
+           어긋났다(막힌 곡이 목록에 있으면 계속 겹쳐 쌓였다). */
+        clearTimeout(errSkipT);
+        errSkipT=setTimeout(()=>{ if(crate.length>1) next(); },1400);
       }
     }
   });
@@ -1866,6 +1878,10 @@ function startPoll(){
        그대로 들고 있는 순간이 있다 — 그 값으로 톤암을 갱신하면 새 곡인데 이전 곡
        위치로 튀어 보인다. onStateChange가 실제 전환을 확인해줄 때까지 기다린다. */
     if(!armSynced) return;
+    /* 두 번째 그물 — 플레이어가 지금 물고 있는 영상이 우리가 틀려던 곡과 다르면
+       그 값은 남의 곡 것이다. 어떤 경로로 어긋났든 여기서 막는다. */
+    const vd=player.getVideoData&&player.getVideoData(), it=crate[current];
+    if(it&&vd&&vd.video_id&&vd.video_id!==it.id) return;
     const d=player.getDuration()||0, t=player.getCurrentTime()||0;
     if(d>0){
       const p=t/d;
@@ -1914,6 +1930,7 @@ function playIndex(i){
   el.artist.textContent=cleanArtist(it.author)||'YouTube';
   setArm(0); cueDown();                 // 바깥 홈으로 스윙하며 바늘을 내려놓는다
   armSynced=false;                      // 새 영상이 실제로 자리잡을 때까지 폴링이 톤암을 건드리지 못하게
+  clearTimeout(errSkipT);               // 막힌 곡 때문에 예약돼 있던 자동 넘김이 뒤늦게 터지지 않게
   player.loadVideoById(it.id); player.playVideo();
   updateMediaSession(); savePlayState();
   setView('player');
