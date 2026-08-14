@@ -322,11 +322,18 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
 }
 .halo.on{opacity:.48;}
 /* 바닥에 닿은 듯한 그림자 */
-.floor{
+/* .halo와 같은 이유 — border-radius+filter:blur 를 한 요소에 같이 쓰면 사파리가
+   블러를 원 밖으로 새어나가게 그려서 판 아래에 가느다란 사각형 선이 비쳐 보인다.
+   여기도 클립용 래퍼와 블러용 내부 요소로 나눈다 */
+.floorclip{
   position:absolute;left:48%;top:50%;
   width:calc(var(--d) * 0.88);height:52px;
   margin:calc(var(--d) * 0.505) 0 0 calc(var(--d) * -0.44);
-  border-radius:50%;
+  border-radius:50%;overflow:hidden;
+  pointer-events:none;
+}
+.floor{
+  position:absolute;inset:0;
   background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,.55), rgba(0,0,0,.22) 52%, transparent 72%);
   filter:blur(14px);opacity:0;transition:opacity .5s;pointer-events:none;
 }
@@ -524,11 +531,12 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
 /* 제목이 길어서 잘리면 전광판처럼 좌우로 훑어 보여준다 (JS 가 넘칠 때만 켠다) */
 .meta .t.marquee{text-overflow:clip;animation:titleMarquee var(--mq-dur,10s) linear infinite;}
-/* 오른쪽 바깥에서 들어와 왼쪽 바깥으로 완전히 흘러나간 뒤,
-   다시 오른쪽 바깥에서 나오는 전광판(순간 리셋, 왕복 없음) */
+/* 유튜브 뮤직처럼: 제목이 바뀌면 항상 처음 글자부터 바로 읽히게 제자리에서 시작해
+   잠깐 멈춰 있다가, 끝까지 흘러가서 다시 잠깐 멈춘 뒤 제자리로 순간 리셋한다.
+   (예전엔 화면 밖 오른쪽에서 흘러 들어오기 시작해 제목 앞부분을 놓치고 봐야 했다) */
 @keyframes titleMarquee{
-  0%{transform:translateX(var(--mq-start,0px));}
-  100%{transform:translateX(var(--mq-end,0px));}
+  0%,10%{transform:translateX(0);}
+  90%,100%{transform:translateX(var(--mq-end,0px));}
 }
 .meta .a{font-size:11.5px;color:rgba(255,255,255,.56);margin-top:10px;letter-spacing:.17em;
   text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -747,13 +755,16 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
 .menu{
   position:absolute;top:calc(max(18px,calc(env(safe-area-inset-top) + 10px)) + 46px);right:20px;z-index:40;
   width:248px;padding:7px;border-radius:16px;
+  /* 항목이 늘어나 화면보다 길어지면 아래쪽(예: 유튜브 로그인)이 잘려서 아예 안 보이던 문제 —
+     최대 높이를 화면에 맞게 제한하고 넘치면 안에서 스크롤되게 한다 */
+  max-height:calc(100vh - (max(18px,calc(env(safe-area-inset-top) + 10px)) + 46px) - env(safe-area-inset-bottom) - 16px);
   /* 반투명하면 뒤쪽 밝은 요소(톤암 받침 등)가 비쳐 얼룩처럼 보인다 → 불투명하게 */
   background:#1b1920;
   box-shadow:0 22px 54px rgba(0,0,0,.65), inset 0 0 0 1px rgba(255,255,255,.14);
   /* 사파리에서 위쪽 요소의 backdrop-filter 가 아래 요소에 얼룩을 남기는 일이 있다.
      자체 합성 레이어로 격리하고 바깥으로 새는 그리기를 막는다. */
   isolation:isolate;
-  overflow:hidden;
+  overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;
   will-change:transform,opacity;
   backface-visibility:hidden;-webkit-backface-visibility:hidden;
   opacity:0;transform:translateY(-8px) scale(.97);pointer-events:none;transition:.2s cubic-bezier(.2,.8,.25,1);
@@ -1023,7 +1034,7 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
 
     <div class="stage" id="stage">
       <div class="haloclip"><div class="halo" id="halo"></div></div>
-      <div class="floor" id="floor"></div>
+      <div class="floorclip"><div class="floor" id="floor"></div></div>
       <div class="disc hide" id="disc">
         <div class="spin" id="spin">
           <div class="vinyl"></div>
@@ -1191,12 +1202,11 @@ function updateTitleMarquee(){
   el.title.classList.remove('marquee');
   const box=el.title.clientWidth, full=el.title.scrollWidth;
   if(full-box>4){
-    // 첫 글자가 원래 시작하는 자리(0) 기준으로, 오른쪽 바깥에서 들어와 왼쪽 바깥으로 완전히
-    // 빠져나갈 때까지 흐르게 한다. 다 빠져나가면 다시 오른쪽 바깥에서 나온다(순간 리셋).
-    el.title.style.setProperty('--mq-start', box+'px');
+    // 제자리(글자 맨 앞)에서 시작해 왼쪽 바깥으로 완전히 빠져나갈 때까지 흐른다.
+    // 앞뒤로 잠깐 멈추는 시간은 keyframe(0~10%, 90~100%)이 담당하므로 여기선 여유를 더해준다.
     el.title.style.setProperty('--mq-end', (-full)+'px');
-    const dist=box+full;
-    el.title.style.setProperty('--mq-dur', Math.max(6,Math.min(22,dist/70)).toFixed(1)+'s');
+    const dist=full;
+    el.title.style.setProperty('--mq-dur', Math.max(6,Math.min(22,dist/70+2.4)).toFixed(1)+'s');
     el.title.classList.add('marquee');
   }
 }
@@ -3393,7 +3403,13 @@ renderCrates(); renderRail(); renderGrid(); updateButtons(); setView('player'); 
 layout(); setArm(null);
 setTimeout(layout,140);
 restoreMeta();
-if(crate.length){ el.empty.classList.add('gone'); setBG(crate[0]); }
+/* 유튜브 iframe API가 준비되기 전(수 초 걸릴 수 있다)엔 disc가 기본 hide 상태라
+   판이 아예 안 보이고 톤암만 허공에 떠 있는 것처럼 보였다 — 곡이 있으면 플레이어가
+   준비되길 기다리지 않고 바로 판(그루브)과 라벨을 먼저 보여준다 */
+if(crate.length){
+  el.empty.classList.add('gone'); setBG(crate[0]);
+  el.disc.classList.remove('hide'); setLabel(crate[0]);
+}
 preparePlayState();          // 저장된 마지막 곡을 찾아 둔다
 if(ready) tryRestore();
 
