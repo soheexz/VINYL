@@ -87,17 +87,19 @@ img{
   -webkit-user-select:none; user-select:none;
   pointer-events:none;
 }
+/* 높이를 100%/100dvh 로 주면, "홈 화면에 추가"(웹앱)에서 그 값이 실제 화면보다
+   짧게 잡히는 경우가 있다 — 그러면 위(상태바)·아래(홈 인디케이터) 자리에 배경이
+   안 깔려 body 색(#0d0d10)이 띠처럼 드러난다.
+   fixed + inset:0 은 뷰포트에 정확히 맞춰지므로(viewport-fit=cover 라 안전영역 포함)
+   높이 계산에 기대지 않고 항상 화면 끝까지 채운다. */
 #app{
-  position:fixed;left:0;right:0;top:0;height:100%;overflow:hidden;
+  position:fixed;inset:0;overflow:hidden;
   opacity:0;transition:opacity .34s ease;
 }
 #app.ready{opacity:1;}
 /* 결 노이즈는 첫 페인트 뒤에 올린다 — 처음부터 깔면 지지직거리며 나타난다 */
 .grain{opacity:0;transition:opacity .6s ease .15s;}
 #app.ready .grain{opacity:.32;}
-@supports (height:100dvh){
-  #app{height:100dvh;}
-}
 
 /* ---------------- 배경: 앨범 아트 블러 ---------------- */
 /* A/B 두 겹을 번갈아 쓴다.
@@ -301,22 +303,24 @@ body.railoff .meta{
 body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) scale(.92);}
 
 /* 판 뒤에 번지는 앨범 색 후광 */
-/* border-radius + filter:blur 를 같은 요소에 함께 쓰면 사파리가 블러를
-   원 밖으로 새어나가게 그려서 판 뒤에 사각형이 비쳐 보인다(.disc 그림자와 같은 종류의 버그).
-   그래서 원형으로 자르는 역할(overflow:hidden)과 블러를 거는 역할을 별개 요소로 나눈다:
-   바깥 .haloclip 이 원형으로 확실히 자르고, 안쪽 #halo 는 그 안에서 블러만 담당한다 */
+/* 후광은 앨범 사진을 크게 blur 한 것이라 요소 끝까지 색이 꽉 차 있다.
+   그래서 "자르는" 방식으로는 경계를 없앨 수 없다 — 네모로 자르면 사각형이,
+   원으로 자르면 판 위에 큰 원이 비쳐 보인다(둘 다 실제로 겪은 증상).
+   자르지 않고 마스크로 가장자리를 투명하게 녹여서, 아예 경계가 생기지 않게 한다. */
 .haloclip{
   position:absolute;top:50%;left:48%;
   /* 판 크로마와 바깥 배경(.bg) 사이 경계가 만져지지 않도록 훨씬 넓고 흐리게 퍼뜨린다 */
   width:calc(var(--d) * 2.4);height:calc(var(--d) * 2.4);
   margin:calc(var(--d) * -1.2) 0 0 calc(var(--d) * -1.2);
-  border-radius:50%;overflow:hidden;
   pointer-events:none;
 }
 .halo{
   position:absolute;inset:0;
   background-size:cover;background-position:center;
   filter:blur(120px) saturate(1.45);
+  /* 가운데는 그대로, 바깥으로 갈수록 서서히 투명 → 끊기는 선이 남지 않는다 */
+  -webkit-mask-image:radial-gradient(closest-side, #000 30%, rgba(0,0,0,.45) 58%, transparent 80%);
+  mask-image:radial-gradient(closest-side, #000 30%, rgba(0,0,0,.45) 58%, transparent 80%);
   opacity:0;transition:opacity .7s ease, background-image .7s ease;
   pointer-events:none;
 }
@@ -1879,6 +1883,12 @@ function syncMeta(){
   if(!ready||!player.getVideoData) return;
   const d=player.getVideoData()||{};
   if(!d.video_id) return;
+  /* 곡을 넘기는 중에는 플레이어가 아직 직전 곡을 들고 있다. 그 값으로 current 를
+     되돌려 버리면 제목·라벨·배경이 이전 곡으로 튀고, 그 바람에 톤암까지 이전 곡의
+     진행률로 끌려간다 — 판암이 좌우로 왔다 갔다 하던 진짜 원인.
+     지금 틀려던 곡과 다른 영상이면 이번 호출은 통째로 건너뛴다. */
+  const want=crate[current];
+  if(want && d.video_id!==want.id) return;
   const i=crate.findIndex(x=>x.id===d.video_id);
   if(i>=0&&i!==current){ current=i; renderGrid(); }
   const it=crate[current]||{};
