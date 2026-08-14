@@ -521,9 +521,14 @@ body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) sc
 }
 
 /* ---- 곡 정보 (좌하단) ---- */
+/* 판(.disc)은 화면 높이에 맞춰 커지는데, 노트북처럼 가로폭 대비 높이가 낮은 창에서는
+   판이 왼쪽으로 많이 번져 내려와 왼쪽 아래의 제목(.meta)과 겹친다.
+   판의 왼쪽 끝 지점(대략 스테이지 폭의 48% - 지름의 절반)을 넘지 않도록
+   제목 폭을 그때그때 계산해서 항상 판보다 왼쪽에서 끝나게 한다 */
 .meta{
   position:absolute;left:calc(var(--railbase) + 34px);bottom:calc(env(safe-area-inset-bottom) + 44px);
-  max-width:330px;z-index:8;
+  max-width:min(330px, max(64px, calc(0.48 * (100vw - var(--railbase)) - (var(--d) / 2) - 58px)));
+  z-index:8;
   text-shadow:0 2px 14px rgba(0,0,0,.65);
   transition:opacity .25s, transform .46s cubic-bezier(.16,.84,.28,1);
 }
@@ -762,8 +767,11 @@ body.baron .corner{opacity:0;pointer-events:none;transition:opacity .2s;}
   position:absolute;top:calc(max(18px,calc(env(safe-area-inset-top) + 10px)) + 46px);right:20px;z-index:40;
   width:248px;padding:7px;border-radius:16px;
   /* 항목이 늘어나 화면보다 길어지면 아래쪽(예: 유튜브 로그인)이 잘려서 아예 안 보이던 문제 —
-     최대 높이를 화면에 맞게 제한하고 넘치면 안에서 스크롤되게 한다 */
-  max-height:calc(100vh - (max(18px,calc(env(safe-area-inset-top) + 10px)) + 46px) - env(safe-area-inset-bottom) - 16px);
+     최대 높이를 화면에 맞게 제한하고 넘치면 안에서 스크롤되게 한다.
+     vh 기반 계산은 이 요소에서 실제로 0이 되는 경우가 확인돼(사파리 주소창 접힘 등과
+     관련된 것으로 보임) 쓰지 않는다 — 여는 시점에 JS가 window.innerHeight로 직접 px를 넣는다.
+     JS가 못 돌 때를 대비해 기본값은 제한 없음(그래도 잘려서 안 보이는 것보다는 낫다) */
+  max-height:none;
   /* 반투명하면 뒤쪽 밝은 요소(톤암 받침 등)가 비쳐 얼룩처럼 보인다 → 불투명하게 */
   background:#1b1920;
   box-shadow:0 22px 54px rgba(0,0,0,.65), inset 0 0 0 1px rgba(255,255,255,.14);
@@ -994,7 +1002,8 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
 @media (min-aspect-ratio: 1/1) and (max-width: 1250px){
   :root{--railbase:168px; --rail:var(--railbase);}
   .railtrack{padding-left:18px;padding-right:18px;}
-  .meta{left:calc(var(--railbase) + 26px);max-width:290px;}
+  .meta{left:calc(var(--railbase) + 26px);
+    max-width:min(290px, max(64px, calc(0.48 * (100vw - var(--railbase)) - (var(--d) / 2) - 50px)));}
   .meta .t{font:700 27px/1.15 "SF Pro Display",system-ui;}
   .pills{right:30px;gap:10px;}
   .pill{width:56px;height:42px;}
@@ -2691,7 +2700,17 @@ $('#crates').addEventListener('click',async e=>{
 /* ---- 메뉴 ---- */
 const menu=$('#menu');
 function closeMenu(){ menu.classList.remove('on'); }
-$('#chipMenu').addEventListener('click',e=>{ e.stopPropagation(); menu.classList.toggle('on'); });
+$('#chipMenu').addEventListener('click',e=>{
+  e.stopPropagation();
+  const opening=!menu.classList.contains('on');
+  menu.classList.toggle('on');
+  if(opening){
+    // vh 기반 CSS max-height가 이 요소에서 어긋나는 환경이 있어(사파리 주소창 접힘 등),
+    // 열 때마다 실제 window.innerHeight 기준으로 다시 계산해 픽셀로 못박는다.
+    const top=menu.getBoundingClientRect().top;
+    menu.style.maxHeight=Math.max(120, innerHeight-top-16)+'px';
+  }
+});
 document.addEventListener('click',e=>{ if(!menu.contains(e.target)&&e.target.id!=='chipMenu') closeMenu(); });
 
 $('#mRename').addEventListener('click',async()=>{
@@ -3316,20 +3335,22 @@ try{ setYTHide(localStorage.getItem(YTKEY)!=='0', false); }catch(e){ setYTHide(t
    로그인 후에는 이 페이지의 JS가 전부 사라지므로 자동으로 돌아올 방법이 없다 —
    앱 스위처에서 완전히 종료했다가 홈 화면 아이콘으로 다시 열면(같은 저장소를 그대로
    쓰므로) 로그인이 반영된 채로 앱이 새로 뜬다. */
+/* standalone 감지에 기대지 않는다 — 기기·iOS 버전에 따라 오판할 여지가 있고,
+   그래서 버튼이 계속 안 보인다는 문제가 반복됐다. 사파리 탭에서 눌러도
+   해될 게 없으니(그냥 이동했다 뒤로가기) 항상 보여준다. */
 const mLogin=$('#mLogin');
-if(standalone){
-  mLogin.style.display='';
-  mLogin.addEventListener('click',()=>{
-    closeMenu();
-    const ok=confirm(
-      '유튜브 로그인 화면으로 이동합니다.\n\n'+
-      '로그인을 마친 뒤에는 이 화면으로 자동으로 돌아오지 않습니다 — '+
-      '화면 아래에서 위로 쓸어올려 VINYL을 완전히 종료한 다음, '+
-      '홈 화면 아이콘으로 다시 열어야 로그인이 반영됩니다.\n\n계속할까요?'
-    );
-    if(ok) location.href='https://m.youtube.com/';
-  });
-}
+mLogin.style.display='';
+mLogin.addEventListener('click',()=>{
+  closeMenu();
+  const ok=confirm(
+    '유튜브 로그인 화면으로 이동합니다.\n\n'+
+    '로그인을 마친 뒤에는 이 화면으로 자동으로 돌아오지 않습니다.\n'+
+    '홈 화면 아이콘으로 열었다면 — 화면 아래에서 위로 쓸어올려 VINYL을 완전히 종료한 다음, '+
+    '홈 화면 아이콘으로 다시 열어야 로그인이 반영됩니다.\n'+
+    '사파리 탭이라면 — 로그인 후 뒤로가기로 돌아오면 됩니다.\n\n계속할까요?'
+  );
+  if(ok) location.href='https://m.youtube.com/';
+});
 function describe(n){
   if(!n) return 'null';
   let s=n.tagName.toLowerCase();
