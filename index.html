@@ -3486,8 +3486,7 @@ function premiumGuideHTML(){
       '</ol>'+
       '안드로이드는 홈 화면에 추가해도 크롬과 로그인을 함께 쓰기 때문에 이것만 하면 됩니다.';
   }
-  return '광고 없이 들으려면 <b>두 가지</b>가 필요합니다. 하나라도 빠지면 광고가 붙습니다.'+
-    '<ol>'+
+  return '<ol>'+
     '<li><b>사이트 간 추적 방지 끄기</b><br>'+
     '<span class="path">설정 → 앱 → Safari → 고급</span> 에서 '+
     '<b>사이트 간 추적 방지</b>를 끕니다. (iOS 버전에 따라 '+
@@ -3502,7 +3501,7 @@ function premiumGuideHTML(){
 
 async function openPremiumGuide(){
   const go = await askGuide({
-    title:'광고 없이 들으려면',
+    title:'프리미엄 적용',
     html:premiumGuideHTML(),
     ok: isAndroid ? '확인' : '유튜브 로그인',
     cancel: isAndroid ? '' : '나중에'
