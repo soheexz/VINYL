@@ -1301,6 +1301,10 @@ let crate=[], current=-1, player=null, ready=false, playing=false, poll=null, vi
 // 새 영상을 불러오는 중엔 false — onStateChange가 실제 전환을 확인해줄 때까지
 // 진행률 폴링이 이전 곡의 currentTime/duration으로 톤암을 갱신하지 못하게 막는다
 let armSynced=true;
+/* playing 은 플레이어의 '지금 상태'라, iOS 가 회전 중에 멋대로 멈추면 곧바로 false 가 된다.
+   그래서 회전이 끝난 뒤 "원래 틀어져 있었나?"를 물으면 이미 false 라 되살릴 수가 없었다.
+   intendPlay 는 사용자가 직접 누른 의도만 담는다 — 플레이어가 멈춰도 바뀌지 않는다. */
+let intendPlay=false;
 // 재생 불가 곡에서 자동으로 다음 곡으로 넘기는 타이머 — 새 곡을 틀면 취소한다
 let errSkipT=null;
 const $=s=>document.querySelector(s);
@@ -1364,7 +1368,7 @@ function activeCrate(){ return lib.crates[lib.active]; }
 
 /* 목록을 옮길 때 재생을 확실히 끊는다 */
 function resetPlayback(){
-  current=-1; lblKey=null;
+  current=-1; lblKey=null; intendPlay=false;
   el.disc.classList.remove('has-disc');
   el.disc.classList.add('hide');
   setPlaying(false);
@@ -2059,6 +2063,7 @@ function playIndex(i){
   el.title.textContent=cleanTitle(it.title)||'불러오는 중…';
   el.artist.textContent=cleanArtist(it.author)||'YouTube';
   setArm(0); cueDown();                 // 바깥 홈으로 스윙하며 바늘을 내려놓는다
+  intendPlay=true;                      // 곡을 고른 건 틀겠다는 뜻이다
   armSynced=false;                      // 새 영상이 실제로 자리잡을 때까지 폴링이 톤암을 건드리지 못하게
   clearTimeout(errSkipT);               // 막힌 곡 때문에 예약돼 있던 자동 넘김이 뒤늦게 터지지 않게
   player.loadVideoById(it.id); player.playVideo();
@@ -2070,7 +2075,8 @@ function playIndex(i){
 function togglePlay(){
   if(!ready) return;
   if(current<0){ if(crate.length) playIndex(0); return; }
-  playing?player.pauseVideo():player.playVideo();
+  if(playing){ intendPlay=false; player.pauseVideo(); }
+  else       { intendPlay=true;  player.playVideo(); }
 }
 /* ---- 셔플 · 반복 ---- */
 let shuffle=false, repeatMode='off';   // off | all | one
@@ -2132,6 +2138,7 @@ function onEnded(){
   }
   const atEnd = !shuffle && current===crate.length-1;
   if(repeatMode==='off' && (atEnd || crate.length===1)){   // 목록 끝에서 정지
+    intendPlay=false;
     setPlaying(false); setArm(null);
     return;
   }
@@ -3390,7 +3397,7 @@ function tryRestore(){
 let wasPlaying=false, resumeAt=0;
 function rememberPlayback(){
   savePlayState();
-  wasPlaying=playing;
+  wasPlaying=playing||intendPlay;
   try{ resumeAt=(ready&&player.getCurrentTime)?player.getCurrentTime():0; }catch(e){ resumeAt=0; }
 }
 function tryResume(){
@@ -3455,6 +3462,7 @@ function resync(){
     }
   }catch(e){}
   tryResume();     // iOS 가 백그라운드에서 끊어 놓은 재생을 이어 붙인다
+  if(intendPlay) nudgePlay(2);   // 그래도 안 붙었으면 몇 번 더 눌러 본다
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(resync,60); });
 window.addEventListener('pageshow',()=>setTimeout(resync,60));
@@ -3744,9 +3752,20 @@ window.addEventListener('resize',()=>{
    다시 만드느라 메인 스레드가 막힌다 — 화면이 버벅이고 그 여파로 소리까지 끊긴다.
    회전하는 동안만 무거운 효과를 임시로 낮추고(body.rotating), 회전이 끝난 뒤
    한 번에 다시 배치한다. 그 사이 iOS 가 재생을 멈춰 놨으면 되살린다. */
+/* 회전 직후엔 플레이어가 아직 자리를 못 잡아 한 번의 playVideo() 가 씹히는 경우가 있다.
+   잠깐 간격을 두고 몇 번 더 눌러 준다. 이미 재생 중이면 아무 것도 하지 않는다. */
+function nudgePlay(tries){
+  tries = tries==null ? 4 : tries;
+  if(tries<=0 || !intendPlay) return;
+  try{
+    if(ready && player.getPlayerState && player.getPlayerState()!==1) player.playVideo();
+    else return;                                // 이미 재생 중
+  }catch(e){}
+  setTimeout(()=>nudgePlay(tries-1), 500);
+}
 let rotating=false, rotT=null;
 window.addEventListener('orientationchange',()=>{
-  const wantPlay = playing;
+  const wantPlay = intendPlay;
   rotating=true;
   document.body.classList.add('rotating');
   clearTimeout(rotT);
@@ -3755,9 +3774,7 @@ window.addEventListener('orientationchange',()=>{
     document.body.classList.remove('rotating');
     lastResizeW=innerWidth;
     resync();                                   // resync 안에서 layout 도 부른다
-    if(wantPlay){
-      try{ if(player.getPlayerState && player.getPlayerState()!==1) player.playVideo(); }catch(e){}
-    }
+    if(wantPlay) nudgePlay();
   },420);
 });
 
