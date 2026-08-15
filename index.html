@@ -297,7 +297,9 @@ body.railoff .stage{
   transition:transform .32s cubic-bezier(.45,.02,.75,.3);
 }
 body.railoff .meta{
-  transform:translateX(calc(2vw - var(--railbase) * 0.52));
+  /* 선반이 없어진 만큼 제목은 화면 왼쪽 끝 가까이(약 26px)까지 당겨 온다.
+     스테이지와 같은 폭만 밀면 왼쪽에 큰 여백이 남아 제목이 붕 떠 보였다. */
+  transform:translateX(calc(-1 * var(--railbase) + 26px - 34px));
   transition:opacity .25s, transform .32s cubic-bezier(.45,.02,.75,.3);
 }
 body.railoff #ytwrap{transform:translateX(calc(2vw - var(--railbase) * 0.52)) scale(.92);}
@@ -1051,6 +1053,61 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
   .meta{left:26px;bottom:64px;max-width:60%;}
   .pills{right:22px;}
 }
+
+/* ---------------- 폰 가로 ----------------
+   화면이 낮고 옆으로 길다. 세로 폰 규칙은 max-width:820px 라 가로(폭 850~930)에서는
+   걸리지 않아, 그동안 데스크톱 배치가 그대로 적용됐다 — 판이 화면 높이에 눌려
+   아주 작아지고 재생 컨트롤이 판 위에 겹쳐 버렸다.
+   판은 오른쪽에 두고, 왼쪽 기둥에 제목과 컨트롤을 위아래로 모은다. */
+@media (orientation:landscape) and (max-height:520px){
+  :root{--railbase:132px; --d:min(calc(100vh - 76px), 46vw);}
+  .rail,.railbg,.railfade{width:132px;}
+  .railtoggle{left:132px;}
+  .railcap{display:none;}
+  .railtrack{padding:30vh 14px 32vh 14px;}
+
+  /* 판 — 가운데보다 오른쪽으로 */
+  .stage{left:0;}
+  body.railoff .stage{transform:none;}
+  .disc{left:72%; top:calc(50% + 10px);}
+  .arm .pivot{left:-15px;top:-15px;width:30px;height:30px;}
+  .arm .head{top:-5px;width:19px;height:10px;}
+  .armpad{width:44px;height:44px;}
+
+  /* 왼쪽 기둥 — 제목 위, 컨트롤 아래 */
+  .meta{
+    left:calc(var(--railbase) + 20px); right:auto; bottom:auto;
+    /* 화면을 반으로 갈랐을 때 제목은 그 선 바로 위, 컨트롤은 아래에 오도록 */
+    top:calc(50% - 84px);
+    max-width:min(42vw,360px); transform:none;
+  }
+  body.railoff .meta{transform:translateX(calc(-1 * var(--railbase)));}
+  .meta .t{font:700 22px/1.2 "SF Pro Display",system-ui;}
+  .meta .a{font-size:10.5px;margin-top:6px;}
+  .meta .tm{margin-top:8px;padding-top:7px;font-size:10px;}
+
+  .pills{
+    left:calc(var(--railbase) + 20px); right:auto; bottom:auto;
+    top:calc(50% + 16px);
+    justify-content:flex-start; gap:9px; transform:none;
+  }
+  body.railoff .pills{transform:translateX(calc(-1 * var(--railbase)));}
+  .pill{width:52px;height:42px;} .pill.main{width:62px;height:52px;} .pill.sm{width:42px;height:34px;}
+  .pill svg{width:17px;height:17px;} .pill.main svg{width:21px;height:21px;}
+
+  .switcher{left:calc(var(--railbase) + 20px); transform:none;
+            bottom:calc(env(safe-area-inset-bottom) + 8px);}
+  body.railoff .switcher{transform:translateX(calc(-1 * var(--railbase)));}
+  /* 선반이 열리면 같은 자리를 덮으므로 재생목록 칩은 접혀 있을 때만 */
+  body:not(.railoff) .crates{opacity:0;pointer-events:none;}
+  .crates{left:16px;right:auto;transform:none;max-width:38vw;
+          top:max(8px,env(safe-area-inset-top));}
+  .corner{right:12px;top:max(8px,env(safe-area-inset-top));}
+  #ytwrap{left:auto;right:12px;width:96px;transform:none;transform-origin:100% 0%;
+          top:calc(max(8px,env(safe-area-inset-top)) + 46px);}
+  body.ythide #ytwrap{left:auto;right:12px;width:150px;
+          top:calc(max(8px,env(safe-area-inset-top)) + 46px);}
+}
 </style>
 </head>
 <body>
@@ -1385,13 +1442,15 @@ function sizeMeta(){
   const m=el.metaBox;
   if(!m||!G.R) return;
   if(matchMedia('(max-width:820px)').matches){ m.style.maxWidth=''; updateTitleMarquee(); return; }
-  const sl=el.stage.offsetLeft, st=el.stage.offsetTop;
-  const left=m.offsetLeft-sl, top=m.offsetTop-st, h=m.offsetHeight;
-  // 원 중심에서 제목 구간까지의 세로 거리 (구간이 중심을 지나면 0)
-  const dy=Math.max(0, Math.max(G.C.y-(top+h), top-G.C.y));
-  const edge = dy>=G.R ? el.stage.offsetWidth        // 판과 세로로 안 겹친다 → 끝까지 써도 된다
-                       : G.C.x-Math.sqrt(G.R*G.R-dy*dy);
-  const w=Math.max(140, Math.min(edge-left-24, 620));
+  /* 선반을 접으면 제목과 스테이지가 서로 다른 거리만큼 움직이므로, 화면 좌표로 잰다.
+     원의 중심·반지름은 애니메이션에 흔들리지 않는 G(배치값)를 쓰고,
+     스테이지가 화면 어디에 놓였는지만 실제 위치에서 가져와 더한다. */
+  const sr=el.stage.getBoundingClientRect(), mr=m.getBoundingClientRect();
+  const cx=sr.left+G.C.x, cy=sr.top+G.C.y;
+  const dy=Math.max(0, Math.max(cy-mr.bottom, mr.top-cy));
+  const edge = dy>=G.R ? sr.right                    // 판과 세로로 안 겹친다 → 끝까지 써도 된다
+                       : cx-Math.sqrt(G.R*G.R-dy*dy);
+  const w=Math.max(140, Math.min(edge-mr.left-24, 620));
   m.style.maxWidth=w+'px';
   updateTitleMarquee();
 }
@@ -3001,7 +3060,9 @@ function setRail(off,save){
   if(save!==false){ try{ localStorage.setItem(RAILKEY, off?'1':'0'); }catch(e){} }
   // 열기 전에 미리 정렬해 두면, 이미 맞춰진 상태로 미끄러져 들어온다
   if(!off && current>=0) railScrollTo(current, true);
-  // 판과 톤암은 선반과 무관하게 제자리에 있으므로 다시 계산할 필요가 없다
+  // 판과 톤암은 선반과 무관하게 제자리에 있으므로 다시 계산할 필요가 없다.
+  // 제목만은 선반 여닫기에 따라 좌우로 움직이므로, 미끄러짐이 끝난 뒤 폭을 다시 잡는다
+  setTimeout(sizeMeta, 380);
 }
 $('#railToggle').addEventListener('click',()=>
   setRail(!document.body.classList.contains('railoff')));
