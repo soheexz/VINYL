@@ -3029,22 +3029,43 @@ document.addEventListener('pointercancel',()=>{ edgeSwipe=null; });
    에서 시작한 왼쪽 밀기만 닫기로 받는다. */
 let railClose=null;
 /* 캡처 단계로 듣는다 — 선반 안쪽 요소들이 이벤트를 먼저 처리하거나 멈춰도 우리가 먼저 본다.
-   대상 요소를 따지는 대신 "선반 폭 안에서 시작했는가"라는 좌표로 판단해서,
-   선반 안 어느 요소 위에서 시작하든 똑같이 동작하게 한다. */
-document.addEventListener('pointerdown',e=>{
+   포인터 이벤트만 쓰면 브라우저(특히 안드로이드)에 따라 중간 이동 신호가 안 오는 경우가
+   있어서, 터치 이벤트로도 똑같이 받는다. 둘 다 와도 상태만 덮어쓰므로 문제없다. */
+function railCloseStart(x,y,target,id){
   if(document.body.classList.contains('railoff')) return;   // 이미 닫혀 있으면 할 일 없다
-  if(e.clientX > (el.rail.offsetWidth||172)) return;        // 선반 폭 밖에서 시작하면 상관없다
-  if(e.target.closest && e.target.closest('.lp')) return;   // 앨범 위에서 시작하면 삭제 제스처에 양보
-  railClose={x:e.clientX,y:e.clientY,id:e.pointerId};
-},true);
-document.addEventListener('pointermove',e=>{
-  if(!railClose||e.pointerId!==railClose.id) return;
-  const dx=e.clientX-railClose.x, dy=e.clientY-railClose.y;
+  const railW=el.rail.offsetWidth||172;
+  /* 선반 오른쪽 가장자리(손잡이가 있는 자리)에서 시작하면 앨범 위여도 닫기로 받는다.
+     폰에서는 선반이 좁아 앨범이 거의 다 덮고 있어서, 앨범을 피해 빈 곳에서만 받으면
+     실제로는 닫을 자리가 없다시피 하다. */
+  const onHandle = x>=railW-30 && x<=railW+30;
+  if(!onHandle){
+    if(x>railW) return;                                     // 선반 밖에서 시작하면 상관없다
+    if(target && target.closest && target.closest('.lp')) return; // 앨범 위면 삭제 제스처에 양보
+  }
+  railClose={x:x, y:y, id:(id===undefined?null:id)};
+}
+function railCloseMove(x,y,id){
+  if(!railClose) return;
+  if(railClose.id!=null && id!=null && id!==railClose.id) return;
+  const dx=x-railClose.x, dy=y-railClose.y;
   if(Math.abs(dy)>40){ railClose=null; return; }             // 위아래로 어긋나면 선반 스크롤 의도
-  if(dx<-50){ setRail(true); railClose=null; }
-},true);
-document.addEventListener('pointerup',()=>{ railClose=null; },true);
-document.addEventListener('pointercancel',()=>{ railClose=null; },true);
+  if(dx<-40){ setRail(true); railClose=null; }
+}
+const railCloseEnd=()=>{ railClose=null; };
+
+document.addEventListener('pointerdown',e=>railCloseStart(e.clientX,e.clientY,e.target,e.pointerId),true);
+document.addEventListener('pointermove',e=>railCloseMove(e.clientX,e.clientY,e.pointerId),true);
+document.addEventListener('pointerup',railCloseEnd,true);
+document.addEventListener('pointercancel',railCloseEnd,true);
+/* 터치 이벤트 백업 경로 — passive 로 달아 스크롤 성능에 영향을 주지 않는다 */
+document.addEventListener('touchstart',e=>{
+  const t=e.touches[0]; if(t) railCloseStart(t.clientX,t.clientY,e.target);
+},{capture:true,passive:true});
+document.addEventListener('touchmove',e=>{
+  const t=e.touches[0]; if(t) railCloseMove(t.clientX,t.clientY);
+},{capture:true,passive:true});
+document.addEventListener('touchend',railCloseEnd,{capture:true,passive:true});
+document.addEventListener('touchcancel',railCloseEnd,{capture:true,passive:true});
 
 /* ---- 전체 화면 ----
    홈 화면에 추가해서 열면 이미 전체 화면이라 버튼을 숨긴다.
