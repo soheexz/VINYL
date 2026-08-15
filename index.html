@@ -919,6 +919,16 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
 }
 .modal.on .card{transform:none;}
 .modal .mt{font:600 16px/1.4 "SF Pro Display",system-ui;margin-bottom:16px;letter-spacing:-.01em;}
+/* 안내문 본문 — 여러 줄 설명과 번호 매긴 순서를 담는다 */
+.modal .mb{font-size:13.5px;line-height:1.62;color:rgba(255,255,255,.78);margin:-6px 0 18px;}
+.modal .mb.hide{display:none;}
+.modal .mb b{color:#fff;font-weight:600;}
+.modal .mb ol{margin:10px 0 0;padding-left:20px;}
+.modal .mb li{margin:5px 0;}
+.modal .mb .path{
+  display:inline-block;background:rgba(255,255,255,.1);border-radius:6px;
+  padding:1px 7px;margin:1px 0;font-size:12.5px;color:#fff;
+}
 .modal input{
   width:100%;padding:12px 14px;border-radius:11px;border:0;outline:none;margin-bottom:18px;
   background:rgba(0,0,0,.45);color:#fff;font-size:15px;
@@ -1169,7 +1179,7 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
     </div>
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
-    <button id="mLogin" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg></span>유튜브에 로그인</button>
+    <button id="mLogin" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg></span>광고 없이 듣기</button>
   </div>
   <div class="menu" id="chooser"></div>
   <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
@@ -1187,6 +1197,7 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
   <div class="modal" id="modal">
     <div class="card">
       <div class="mt" id="modalTitle"></div>
+      <div class="mb hide" id="modalBody"></div>
       <input id="modalInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
       <div class="row">
         <button id="modalCancel">취소</button>
@@ -1286,6 +1297,7 @@ function resetPlayback(){
   el.time.textContent='0:00 / 0:00';
 }
 function afterCrateChange(){
+  crateFocus();
   el.title.textContent=activeCrate().name;
   el.artist.textContent=crate.length? crate.length+'곡' : 'NONE';
   setBG(crate[0]||null);
@@ -2161,6 +2173,23 @@ function renderCrates(){
   const bar=$('#crates');
   if(bar.dataset.sig!==html){ bar.dataset.sig=html; bar.innerHTML=html; }
   $('#railCap').textContent=activeCrate().name;
+  crateFocus(true);
+}
+
+/* 재생목록이 많아 알약이 옆으로 넘치면, 지금 듣고 있는 곡이 담긴 목록(=활성 목록)의
+   이름이 화면 밖으로 밀려나 뭘 듣는지 알 수 없었다. 그 칩을 늘 가운데로 데려온다. */
+function crateFocus(instant){
+  const bar=$('#crates');
+  if(!bar) return;
+  const on=bar.querySelector('.cratechip[aria-pressed="true"]');
+  if(!on) return;
+  const max=bar.scrollWidth-bar.clientWidth;
+  if(max<=0) return;                    // 넘치지 않으면 옮길 것도 없다
+  const target=on.offsetLeft-(bar.clientWidth-on.offsetWidth)/2;
+  const left=Math.max(0,Math.min(max,target));
+  if(Math.abs(bar.scrollLeft-left)<1) return;
+  try{ bar.scrollTo({left, behavior:instant?'auto':'smooth'}); }
+  catch(e){ bar.scrollLeft=left; }
 }
 
 function railHTML(){
@@ -2697,7 +2726,8 @@ el.gwrap.addEventListener('pointercancel',endPinchPointer);
 /* ============================================================
    앱 안 입력창 — 시스템 prompt/confirm 을 쓰면 전체 화면이 풀린다
    ============================================================ */
-const modal=$('#modal'), mTitle=$('#modalTitle'), mInput=$('#modalInput');
+const modal=$('#modal'), mTitle=$('#modalTitle'), mInput=$('#modalInput'), mBody=$('#modalBody');
+const mOk=$('#modalOk'), mCancel=$('#modalCancel');
 let mResolve=null;
 function closeModal(v){
   modal.classList.remove('on');
@@ -2705,9 +2735,15 @@ function closeModal(v){
   const r=mResolve; mResolve=null;
   if(r) r(v);
 }
+/* 매번 깨끗한 상태에서 시작한다 — 앞서 띄운 안내문이나 바뀐 버튼 이름이 남지 않게 */
+function modalReset(){
+  mBody.innerHTML=''; mBody.classList.add('hide');
+  mOk.textContent='확인'; mCancel.textContent='취소';
+  mCancel.style.display='';
+}
 function askText(title, value){
   return new Promise(res=>{
-    mResolve=res;
+    mResolve=res; modalReset();
     mTitle.textContent=title;
     mInput.classList.remove('hide');
     mInput.value=value||'';
@@ -2717,9 +2753,24 @@ function askText(title, value){
 }
 function askConfirm(title){
   return new Promise(res=>{
-    mResolve=res;
+    mResolve=res; modalReset();
     mTitle.textContent=title;
     mInput.classList.add('hide');
+    modal.classList.add('on');
+  });
+}
+/* 설명이 긴 안내창 — 제목 아래에 본문(HTML)을 넣고 버튼 이름도 바꿔 쓴다.
+   o.cancel 을 비우면 확인 버튼만 있는 안내창이 된다. */
+function askGuide(o){
+  return new Promise(res=>{
+    mResolve=res; modalReset();
+    mTitle.textContent=o.title;
+    mBody.innerHTML=o.html;
+    mBody.classList.remove('hide');
+    mInput.classList.add('hide');
+    mOk.textContent=o.ok||'확인';
+    if(o.cancel) mCancel.textContent=o.cancel;
+    else mCancel.style.display='none';
     modal.classList.add('on');
   });
 }
@@ -3415,31 +3466,70 @@ try{ setYTHide(localStorage.getItem(YTKEY)!=='0', false); }catch(e){ setYTHide(t
    저장소는 여전히 비어 있어 프리미엄이 하나도 반영이 안 된다.
    accounts.google.com은 유튜브 앱이 가로채는 도메인이 아니라서 그 문제를 피한다.
    로그인이 끝나면 구글이 알아서 continue 로 지정한 유튜브로 넘겨준다. */
-const mLogin=$('#mLogin');
-mLogin.style.display='';
-mLogin.addEventListener('click',()=>{
-  closeMenu();
-  const ok=confirm(
-    '구글 로그인 화면으로 이동합니다.\n\n'+
-    '다만 이 방법은 확실하지 않습니다 — 로그인 마지막 단계에서 아이폰이 유튜브 앱을 '+
-    '대신 열어버리면 이 앱에는 반영되지 않습니다.\n\n'+
-    '확실한 방법은 따로 있습니다: 홈 화면 아이콘을 지우고, 사파리에서 이 주소를 연 뒤 '+
-    '공유 → 홈 화면에 추가에서 "웹 앱으로 열기"를 끄고 추가하세요. '+
-    '그러면 사파리와 로그인을 그대로 함께 쓰기 때문에 프리미엄이 바로 적용됩니다. '+
-    '(옮기기 전에 ⋯ 메뉴의 "공유 링크 복사"로 목록을 먼저 챙겨 두세요.)\n\n'+
-    '그래도 로그인 화면으로 갈까요?'
-  );
-  if(!ok) return;
-  // m.youtube.com(모바일용) 대신 www — 유튜브 앱의 유니버설 링크가 모바일 서브도메인만
-  // 물고 있고 데스크톱용 도메인은 안 건드릴 가능성을 시험해본다
+/* ---- 프리미엄(광고 없이 듣기) 안내 ----
+   광고가 붙는 진짜 이유는 로그인 자체가 아니라, 브라우저가 "남의 사이트에 끼워 넣은
+   유튜브 창"에 로그인 쿠키를 넘겨주지 않기 때문이다.
+   - 아이폰 사파리: '사이트 간 추적 방지'가 그걸 막는다 → 끄면 해결된다(실제로 확인).
+   - 안드로이드 크롬: 기본적으로 막지 않는다 → 크롬에서 유튜브에 로그인만 해두면 된다.
+   iOS 는 웹페이지에서 설정 앱을 열 수 없다(App-prefs 같은 주소는 사파리에서 막혀 있다).
+   그래서 버튼으로 보내는 대신 찾아가는 길을 또렷하게 적어 준다. */
+const isAndroid = /Android/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+
+function premiumGuideHTML(){
+  if(isAndroid){
+    return '광고 없이 들으려면 <b>크롬에서 유튜브에 로그인</b>되어 있어야 합니다.'+
+      '<ol>'+
+      '<li>크롬으로 <span class="path">youtube.com</span> 을 열어 로그인합니다</li>'+
+      '<li>VINYL 로 돌아와 곡을 재생합니다</li>'+
+      '</ol>'+
+      '안드로이드는 홈 화면에 추가해도 크롬과 로그인을 함께 쓰기 때문에 이것만 하면 됩니다.';
+  }
+  return '광고 없이 들으려면 <b>두 가지</b>가 필요합니다. 하나라도 빠지면 광고가 붙습니다.'+
+    '<ol>'+
+    '<li><b>사이트 간 추적 방지 끄기</b><br>'+
+    '<span class="path">설정 → 앱 → Safari → 고급</span> 에서 '+
+    '<b>사이트 간 추적 방지</b>를 끕니다. (iOS 버전에 따라 '+
+    '<span class="path">설정 → Safari → 개인정보 보호 및 보안</span> 에 있습니다)<br>'+
+    '이걸 꺼야 유튜브 창이 로그인을 알아봅니다.</li>'+
+    '<li><b>유튜브에 로그인</b><br>아래 버튼으로 로그인합니다.</li>'+
+    '</ol>'+
+    '<b>홈 화면 아이콘</b>으로 쓰신다면, 아이콘은 사파리와 로그인이 분리돼 있어 '+
+    '아래 버튼으로 이 앱 안에서 한 번 더 로그인해야 합니다. '+
+    '로그인 뒤에는 앱을 완전히 종료했다가 다시 열어 주세요.';
+}
+
+async function openPremiumGuide(){
+  const go = await askGuide({
+    title:'광고 없이 들으려면',
+    html:premiumGuideHTML(),
+    ok: isAndroid ? '확인' : '유튜브 로그인',
+    cancel: isAndroid ? '' : '나중에'
+  });
+  if(!go || isAndroid) return;
   /* 착지 지점을 유튜브 첫 화면이 아니라 /embed/ 로 잡는다.
      유튜브 앱은 /watch, /playlist, 첫 화면 같은 "볼거리" 주소만 가로채 간다.
-     /embed/ 는 남의 사이트에 끼워 넣는 용도라 앱이 물어가지 않으므로, 로그인 마지막
-     단계가 브라우저 안에서 끝나고 유튜브 쿠키가 이 앱 저장소에 남을 여지가 생긴다.
+     /embed/ 는 남의 사이트에 끼워 넣는 용도라 앱이 물어가지 않는다.
      service=youtube 는 구글이 로그인하면서 유튜브 쪽 세션까지 맞춰 주도록 하는 값이다. */
   location.href='https://accounts.google.com/ServiceLogin?service=youtube&continue='+
     encodeURIComponent('https://www.youtube.com/embed/dQw4w9WgXcQ');
-});
+}
+
+const mLogin=$('#mLogin');
+mLogin.style.display='';
+mLogin.addEventListener('click',()=>{ closeMenu(); openPremiumGuide(); });
+
+/* 처음 열었을 때 한 번만 안내한다 — 모르면 계속 광고를 보게 되는 설정이라서 */
+const TIPKEY='vinyl_premium_tip';
+try{
+  if(!localStorage.getItem(TIPKEY)){
+    setTimeout(()=>{
+      try{ localStorage.setItem(TIPKEY,'1'); }catch(e){}
+      openPremiumGuide();
+    }, 1200);
+  }
+}catch(e){}
 function describe(n){
   if(!n) return 'null';
   let s=n.tagName.toLowerCase();
