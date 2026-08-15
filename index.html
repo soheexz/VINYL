@@ -1108,6 +1108,26 @@ body.ythide.adshow #ytwrap{opacity:1;pointer-events:auto;}
   body.ythide #ytwrap{left:auto;right:12px;width:150px;
           top:calc(max(8px,env(safe-area-inset-top)) + 46px);}
 }
+
+/* ---- 회전하는 동안만 무거운 효과를 낮춘다 ----
+   배경 블러(62px)·후광 블러(120px)·유리 재질(backdrop-filter)을 회전 애니메이션
+   내내 매 프레임 다시 만들면 메인 스레드가 막혀 화면이 버벅이고 소리까지 끊긴다.
+   회전이 끝나면 클래스가 빠지면서 원래 품질로 돌아온다. */
+body.rotating .bg, body.rotating .bg2{filter:blur(26px) saturate(1.45);}
+body.rotating .halo{filter:blur(40px) saturate(1.4);}
+body.rotating .railbg,
+body.rotating .railtoggle,
+body.rotating .pill,
+body.rotating .switcher,
+body.rotating .crates,
+body.rotating .chip{backdrop-filter:none;-webkit-backdrop-filter:none;}
+/* 재배치가 끝난 뒤 한 번에 보여주면 되므로, 회전 중 전환 애니메이션은 끈다 */
+body.rotating .stage,
+body.rotating .meta,
+body.rotating .disc,
+body.rotating .arm,
+body.rotating .pills,
+body.rotating #ytwrap{transition:none !important;}
 </style>
 </head>
 <body>
@@ -3711,12 +3731,35 @@ document.addEventListener('touchcancel',clearTouchLive,{passive:true});
 let lastResizeW=innerWidth;
 window.addEventListener('resize',()=>{
   if(touchLive) return;   // 손가락이 닿아 있는 동안의 resize는 대부분 사파리 크롬 접힘/펼침이다
+  if(rotating) return;    // 회전 중에는 아래 orientationchange 쪽에서 한 번만 처리한다
   const w=innerWidth;
   if(Math.abs(w-lastResizeW)<10) return;
   lastResizeW=w;
   layout(); railFocus();
 });
-window.addEventListener('orientationchange',()=>setTimeout(resync,320));  // resync 안에서 layout 도 부른다
+
+/* ---- 화면 회전 ----
+   회전하면 화면 전체가 다시 그려진다. 이 앱은 배경 블러(62px)·후광 블러(120px)에
+   유리 재질(backdrop-filter) 알약들까지 겹쳐 있어서, 회전 애니메이션 동안 이걸 매 프레임
+   다시 만드느라 메인 스레드가 막힌다 — 화면이 버벅이고 그 여파로 소리까지 끊긴다.
+   회전하는 동안만 무거운 효과를 임시로 낮추고(body.rotating), 회전이 끝난 뒤
+   한 번에 다시 배치한다. 그 사이 iOS 가 재생을 멈춰 놨으면 되살린다. */
+let rotating=false, rotT=null;
+window.addEventListener('orientationchange',()=>{
+  const wantPlay = playing;
+  rotating=true;
+  document.body.classList.add('rotating');
+  clearTimeout(rotT);
+  rotT=setTimeout(()=>{
+    rotating=false;
+    document.body.classList.remove('rotating');
+    lastResizeW=innerWidth;
+    resync();                                   // resync 안에서 layout 도 부른다
+    if(wantPlay){
+      try{ if(player.getPlayerState && player.getPlayerState()!==1) player.playVideo(); }catch(e){}
+    }
+  },420);
+});
 
 /* ============================================================
    부팅
