@@ -1257,6 +1257,8 @@ body.rotating #ytwrap{transition:none !important;}
     <button id="mFind"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg></span>실물 음반 찾기 — 켬</button>
     <button id="mYT"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7H5zM8 19h8v2H8v-2z"/></svg></span>유튜브 화면 숨기기</button>
     <button id="mLogin" style="display:none"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg></span>유튜브 프리미엄 적용</button>
+    <hr>
+    <button id="mHelp"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.27c.37-.36.59-.86.59-1.4 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></span>도움말</button>
   </div>
   <div class="menu" id="chooser"></div>
   <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
@@ -3590,6 +3592,9 @@ $('#mYT').addEventListener('click',()=>{
 });
 // 기본값은 숨김. 사용자가 직접 켠 적이 있을 때만 보여 준다.
 try{ setYTHide(localStorage.getItem(YTKEY)!=='0', false); }catch(e){ setYTHide(true,false); }
+
+/* 앱을 벗어나는 링크라 새 탭으로 연다 — 재생 중인 곡이 안 끊기게 */
+$('#mHelp').addEventListener('click',()=>{ closeMenu(); window.open('./guide.html','_blank'); });
 
 /* ---- 유튜브 로그인 ----
    "홈 화면에 추가"는 사파리와 쿠키 저장소가 분리돼 있어, 사파리에서 프리미엄으로
