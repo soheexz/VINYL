@@ -3756,11 +3756,19 @@ window.addEventListener('resize',()=>{
    잠깐 간격을 두고 몇 번 더 눌러 준다. 이미 재생 중이면 아무 것도 하지 않는다. */
 function nudgePlay(tries){
   tries = tries==null ? 4 : tries;
-  if(tries<=0 || !intendPlay) return;
-  try{
-    if(ready && player.getPlayerState && player.getPlayerState()!==1) player.playVideo();
-    else return;                                // 이미 재생 중
-  }catch(e){}
+  if(!intendPlay) return;
+  let isPlaying=false;
+  try{ isPlaying = !!(ready && player.getPlayerState && player.getPlayerState()===1); }catch(e){}
+  if(isPlaying) return;                         // 이미 재생 중이면 끝
+  if(tries<=0){
+    /* iOS는 시간이 좀 지나 "오디오 세션"이 식으면, 진짜 손가락 탭 없이 부르는
+       playVideo() 를 그냥 막아 버린다 — 회전 이벤트는 그 탭으로 안 쳐준다.
+       "처음엔 되는데 시간 지나면 안 된다"는 게 정확히 이 증상이다.
+       코드로는 더 못 뚫는 벽이라, 재시도만 반복하는 대신 직접 눌러야 한다고 알려준다. */
+    toast('자동으로 이어지지 않았어요 — 재생 버튼을 눌러 주세요');
+    return;
+  }
+  try{ if(ready && player.playVideo) player.playVideo(); }catch(e){}
   setTimeout(()=>nudgePlay(tries-1), 500);
 }
 let rotating=false, rotT=null;
