@@ -16,6 +16,22 @@
   }
 
   *{box-sizing:border-box;}
+
+  /* 앱으로 돌아가기 — 스크롤해도 늘 왼쪽 위에 붙어 있다 */
+  .back{
+    position:fixed;top:16px;left:16px;z-index:10;
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 16px 9px 12px;border-radius:999px;border:1px solid var(--rule);
+    background:var(--surface);color:var(--ink);
+    font:inherit;font-size:13.5px;font-weight:600;letter-spacing:-.01em;
+    cursor:pointer;box-shadow:0 6px 20px -10px rgba(0,0,0,.4);
+    transition:border-color .15s, transform .15s;
+  }
+  .back:hover{border-color:var(--accent);}
+  .back:active{transform:scale(.97);}
+  .back:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+  .back svg{width:15px;height:15px;fill:currentColor;flex:none;}
+  @media (prefers-reduced-motion:reduce){ .back{transition:none;} }
   body{
     background:var(--paper); color:var(--ink);
     font:400 16.5px/1.75 "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
@@ -128,6 +144,11 @@
     .menu-table td:first-child{white-space:normal;}
   }
 </style>
+
+<button class="back" id="back" type="button">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6L14 3.2 6.2 11l7.8 7.8 1.4-1.4L9 11l6.4-6.4z"/></svg>
+  VINYL로 돌아가기
+</button>
 
 <div class="wrap">
 
@@ -282,3 +303,15 @@
   </footer>
 
 </div>
+
+<script>
+  /* 앱의 ⋯ 메뉴에서 새 탭으로 열렸으면 이 탭만 닫으면 원래 화면(재생 중인 곡 포함)으로 돌아간다.
+     직접 주소로 연 경우엔 닫히지 않으므로, 뒤로 갈 곳이 있으면 뒤로, 없으면 앱으로 보낸다. */
+  document.getElementById('back').addEventListener('click', function(){
+    window.close();
+    setTimeout(function(){
+      if (history.length > 1) history.back();
+      else location.href = './index.html';
+    }, 150);
+  });
+</script>

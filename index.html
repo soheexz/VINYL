@@ -1946,7 +1946,14 @@ const tag=document.createElement('script');
 tag.src='https://www.youtube.com/iframe_api';
 document.head.appendChild(tag);
 
-window.onYouTubeIframeAPIReady=function(){
+/* 회전 등으로 iframe 이 통째로 날아가면 player 객체는 남아 있어도 속이 빈 껍데기가 된다.
+   그 상태에서는 playVideo/pauseVideo 가 조용히 아무 일도 안 하고, getPlayerState 는
+   예외를 던지거나 옛 값을 준다 — 재생 버튼을 눌러도 반응이 없던 정체.
+   그래서 "다시 만들 수 있게" 생성 코드를 함수로 빼 둔다. */
+let pendingStart=null;   // 새로 만든 뒤 이어서 틀 곡과 지점
+let lastGoodTime=0;      // 살아 있을 때 마지막으로 읽은 재생 위치
+
+function buildPlayer(){
   player=new YT.Player('player',{
     height:'100%',width:'100%',
     /* youtube-nocookie 가 아니라 www.youtube.com 을 쓴다.
@@ -1956,7 +1963,17 @@ window.onYouTubeIframeAPIReady=function(){
     playerVars:Object.assign({playsinline:1,controls:0,rel:0,modestbranding:1,iv_load_policy:3,fs:0,enablejsapi:1},
       location.protocol.startsWith('http')?{origin:location.origin}:{}),
     events:{
-      onReady(){ ready=true; player.setVolume(85); tryRestore(); },
+      onReady(){
+        ready=true;
+        try{ player.setVolume(85); }catch(e){}
+        if(pendingStart){
+          const p=pendingStart; pendingStart=null;
+          try{
+            player.loadVideoById({videoId:p.id, startSeconds:p.at||0});
+            if(p.play) player.playVideo();
+          }catch(e){}
+        } else tryRestore();
+      },
       onStateChange(e){
         // 상태가 실제로 바뀌었다는 이벤트가 왔다는 건 플레이어 내부가 새 영상으로
         // 넘어갔다는 확실한 신호 — 이때만 currentTime/duration 을 믿어도 된다고 표시한다.
@@ -1994,7 +2011,23 @@ window.onYouTubeIframeAPIReady=function(){
       }
     }
   });
-};
+}
+window.onYouTubeIframeAPIReady=function(){ buildPlayer(); };
+
+/* 껍데기가 된 플레이어를 버리고 새로 만든다. 듣던 지점에서 이어 붙인다.
+   iOS 는 새로 만든 창에서 손가락 탭 없는 자동재생을 막으므로, play 는
+   사용자가 직접 누른 흐름에서만 true 로 넘긴다. */
+function rebuildPlayer(play){
+  const it=crate[current];
+  let at=lastGoodTime;
+  try{ const t=player&&player.getCurrentTime&&player.getCurrentTime(); if(t>0) at=t; }catch(e){}
+  pendingStart = it ? {id:it.id, at:at, play:!!play} : null;
+  ready=false; armSynced=false;
+  try{ if(player&&player.destroy) player.destroy(); }catch(e){}
+  const wrap=document.getElementById('ytwrap');
+  if(wrap) wrap.innerHTML='<div id="player"></div>';
+  if(window.YT&&YT.Player) buildPlayer();
+}
 
 function setPlaying(v){
   playing=v;
@@ -2023,6 +2056,7 @@ function startPoll(){
       const p=t/d;
       el.fill.style.width=(p*100)+'%';
       el.time.textContent=fmt(t)+' / '+fmt(d);
+      lastGoodTime=t;
       if(playing) setArm(p, true);
       const nw=Date.now();
       if(playing && nw-psT>5000){ psT=nw; savePlayState(); }   // 5초마다 위치 저장
@@ -2075,10 +2109,24 @@ function playIndex(i){
   setTimeout(()=>railScrollTo(i),120);
 }
 function togglePlay(){
-  if(!ready) return;
   if(current<0){ if(crate.length) playIndex(0); return; }
-  if(playing){ intendPlay=false; player.pauseVideo(); }
-  else       { intendPlay=true;  player.playVideo(); }
+  /* 플레이어가 껍데기면 ready 도 믿을 수 없다. 눌렀는데 반응이 없으면 다시 만든다 —
+     지금은 사용자가 직접 누른 흐름이라 새 창에서도 재생이 허용된다. */
+  if(!ready){ intendPlay=true; rebuildPlayer(true); return; }
+  let st=null;
+  try{ st = player.getPlayerState ? player.getPlayerState() : null; }catch(e){ st='dead'; }
+  if(st==='dead'){ intendPlay=true; rebuildPlayer(true); return; }
+  if(playing){ intendPlay=false; try{ player.pauseVideo(); }catch(e){} return; }
+  intendPlay=true;
+  try{ player.playVideo(); }catch(e){}
+  // 1.2초 안에 재생/버퍼링으로 넘어가지 않으면 죽은 것으로 보고 되살린다
+  setTimeout(()=>{
+    if(!intendPlay) return;
+    let now=null;
+    try{ now = player.getPlayerState ? player.getPlayerState() : null; }catch(e){ now='dead'; }
+    if(now===1 || now===3) return;              // 재생 중 · 버퍼링
+    rebuildPlayer(true);
+  },1200);
 }
 /* ---- 셔플 · 반복 ---- */
 let shuffle=false, repeatMode='off';   // off | all | one
@@ -3447,12 +3495,17 @@ function resync(){
   layout();
   railFocus();
   if(!ready||!player) return;
+  /* 한 덩어리로 묶어 두면 죽은 플레이어에서 첫 호출이 예외를 던지는 순간
+     나머지가 통째로 건너뛴다 — 화면 상태(playing)가 어긋난 채 남아
+     재생 버튼이 거꾸로 동작하던 원인. 따로따로 감싼다. */
   try{
     if(player.getPlayerState){
       const st=player.getPlayerState();
       const isPlaying = (window.YT && YT.PlayerState) ? st===YT.PlayerState.PLAYING : st===1;
       if(isPlaying!==playing) setPlaying(isPlaying);
     }
+  }catch(e){ if(playing) setPlaying(false); }   // 상태를 못 읽으면 최소한 어긋남은 푼다
+  try{
     if(player.getDuration){
       const dur=player.getDuration()||0, t=player.getCurrentTime()||0;
       if(dur>0){
@@ -3770,6 +3823,11 @@ function nudgePlay(tries){
        playVideo() 를 그냥 막아 버린다 — 회전 이벤트는 그 탭으로 안 쳐준다.
        "처음엔 되는데 시간 지나면 안 된다"는 게 정확히 이 증상이다.
        코드로는 더 못 뚫는 벽이라, 재시도만 반복하는 대신 직접 눌러야 한다고 알려준다. */
+    /* 되살아나지 않는 건 두 가지 중 하나다 — iOS 가 탭 없는 재생을 막았거나,
+       회전 때 iframe 이 통째로 날아가 플레이어가 껍데기가 됐거나.
+       후자면 재생 버튼조차 안 먹으므로, 여기서 미리 새로 만들어 두고
+       (자동재생은 어차피 막히니 play 는 넘기지 않는다) 탭하라고 알린다. */
+    rebuildPlayer(false);
     toast('자동으로 이어지지 않았어요 — 재생 버튼을 눌러 주세요');
     return;
   }
