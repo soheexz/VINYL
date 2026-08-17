@@ -3165,8 +3165,13 @@ $('#chipAdd').addEventListener('click',async function(){
   txt=txt.trim();
   if(txt){
     const p=parseInput(txt);
-    if(p.videos.length||p.list){                   // 유튜브 링크면 바로 추가
+    if(p.videos.length||p.list){
+      /* 아이폰 사파리는 클립보드를 읽기 전에 OS 가 '붙여넣기' 확인을 강제로 띄운다 —
+         사용자가 무엇이 들어가는지 한 번 보고 허락하는 셈이다.
+         안드로이드 크롬은 그 확인이 없어 곧장 곡이 들어가 버린다. 그래서 안드로이드에서는
+         입력창을 열고 링크를 채워만 둬서, 눈으로 확인한 뒤 ＋ 를 누르게 한다. */
       $('#url').value=txt;
+      if(isAndroid){ openBar(false); toast('링크를 확인하고 ＋ 를 눌러 주세요'); return; }
       handleAdd();
       return;
     }
