@@ -2204,12 +2204,23 @@ function updateButtons(){
 /* ============================================================
    크레이트
    ============================================================ */
+/* 유튜브 주소인지 먼저 가른다. 예전엔 아무 낱말에나 https:// 를 붙여 URL 로 만들어 봤는데,
+   그러면 평범한 글자도 '주소'로 통과해 버렸다. */
+const YT_HOST=/^(https?:\/\/)?([\w-]+\.)*(youtube\.com|youtu\.be|youtube-nocookie\.com)(\/|\?|$)/i;
+
 function parseInput(raw){
   const out={videos:[],list:null};
-  raw.split(/[\s,]+/).filter(Boolean).forEach(tok=>{
+  const toks=raw.split(/[\s,]+/).filter(Boolean);
+  /* 유튜브 영상 ID는 그냥 11글자 낱말이라, 평범한 글에도 널려 있다.
+     예전엔 붙여넣은 글을 낱말 단위로 훑으며 11글자면 무조건 곡으로 넣어서,
+     링크가 아닌 걸 복사해 둔 채 ＋추가를 누르면 정체불명의 트랙이 생겼다.
+     맨 ID는 입력 전체가 그 한 낱말일 때만 ID로 인정한다. */
+  const single = toks.length===1;
+  toks.forEach(tok=>{
     let s=tok.trim();
-    if(/^[\w-]{11}$/.test(s)){ out.videos.push(s); return; }
+    if(single && /^[\w-]{11}$/.test(s)){ out.videos.push(s); return; }
     if(/^(PL|OLAK5uy_|RD|UU|LL|FL)[\w-]{10,}$/.test(s)){ out.list=s; return; }
+    if(!YT_HOST.test(s)) return;                 // 유튜브 주소가 아니면 건드리지 않는다
     let u; try{ u=new URL(s.startsWith('http')?s:'https://'+s); }catch(e){ return; }
     const list=u.searchParams.get('list'), v=u.searchParams.get('v');
     if(v&&/^[\w-]{11}$/.test(v)) out.videos.push(v);
@@ -2282,11 +2293,21 @@ function addPlaylist(listId){
       clearInterval(t);
       const n=addVideos(ids);
       toast(n?n+'장의 LP를 넣었어요':'이미 모두 들어 있어요');
-      // 이름을 정해 두지 않은 목록이면 첫 곡의 아티스트로 자동 명명
+      /* 이름 자동 짓기.
+         예전엔 무조건 '첫 곡의 아티스트'를 갖다 썼는데, 여러 가수가 섞인 재생목록에선
+         엉뚱한 사람 이름이 목록 이름이 돼 버렸다.
+         유튜브 재생목록의 진짜 제목은 브라우저에서 가져올 방법이 없다(공식 oEmbed 가
+         재생목록을 지원하지 않는다). 그래서 확실할 때만 짓는다 —
+         곡들의 아티스트가 하나로 모일 때만 그 이름을 쓰고, 섞여 있으면 건드리지 않는다.
+         (섞인 경우엔 ⋯ 메뉴의 '재생목록 이름 바꾸기'로 직접 붙이면 된다) */
       const c=activeCrate();
       if(/^재생목록/.test(c.name)) setTimeout(()=>{
-        const a=cleanArtist(c.items[0]&&c.items[0].author);
-        if(a&&a!=='YouTube'){ c.name=a; save(); renderAll(); }
+        const names=(c.items||[]).map(it=>cleanArtist(it.author))
+                                 .filter(a=>a&&a!=='YouTube');
+        if(!names.length) return;
+        const uniq=[...new Set(names)];
+        if(uniq.length===1){ c.name=uniq[0]; save(); renderAll(); return; }
+        toast('여러 아티스트라 이름을 못 정했어요 — ⋯ 메뉴에서 바꿔 주세요');
       },1800);
     }
     else if(tries>26){ clearInterval(t); toast('재생목록을 불러오지 못했어요 (비공개일 수 있어요)'); }
@@ -3711,12 +3732,12 @@ async function openPremiumGuide(){
     ok:'유튜브 로그인', cancel:'나중에'
   });
   if(!go) return;
-  /* 착지 지점을 유튜브 첫 화면이 아니라 /embed/ 로 잡는다.
-     유튜브 앱은 /watch, /playlist, 첫 화면 같은 "볼거리" 주소만 가로채 간다.
-     /embed/ 는 남의 사이트에 끼워 넣는 용도라 앱이 물어가지 않는다.
+  /* 로그인을 마치면 유튜브 홈으로 보낸다.
+     예전엔 /embed/ 로 보냈다 — 유튜브 앱이 홈·/watch 같은 주소를 가로채 가는 걸
+     피하려던 것인데, 착지하면 난데없이 노래 영상 하나가 떠서 뭘 하라는 건지 알기 어려웠다.
      service=youtube 는 구글이 로그인하면서 유튜브 쪽 세션까지 맞춰 주도록 하는 값이다. */
   location.href='https://accounts.google.com/ServiceLogin?service=youtube&continue='+
-    encodeURIComponent('https://www.youtube.com/embed/dQw4w9WgXcQ');
+    encodeURIComponent('https://m.youtube.com/');
 }
 
 const mLogin=$('#mLogin');
