@@ -2017,7 +2017,15 @@ window.onYouTubeIframeAPIReady=function(){ buildPlayer(); };
 /* 껍데기가 된 플레이어를 버리고 새로 만든다. 듣던 지점에서 이어 붙인다.
    iOS 는 새로 만든 창에서 손가락 탭 없는 자동재생을 막으므로, play 는
    사용자가 직접 누른 흐름에서만 true 로 넘긴다. */
+let lastRebuild=0;
 function rebuildPlayer(play){
+  /* 안전장치 두 개. 이게 없어서 앱이 반복 크래시했다 —
+     resync(포커스·복귀 때마다 실행)가 재생성을 부르고, 재생성은 ready 를 false 로
+     돌려놓기만 하니 다음 resync 가 또 부르는 식으로 iframe 이 무한정 쌓였다. */
+  if(!window.YT || !YT.Player) return false;        // API 가 아직이면 손대지 않는다
+  const nowMs=Date.now();
+  if(nowMs-lastRebuild < 20000) return false;       // 20초 안에 두 번은 만들지 않는다
+  lastRebuild=nowMs;
   const it=crate[current];
   let at=lastGoodTime;
   try{ const t=player&&player.getCurrentTime&&player.getCurrentTime(); if(t>0) at=t; }catch(e){}
@@ -2026,7 +2034,8 @@ function rebuildPlayer(play){
   try{ if(player&&player.destroy) player.destroy(); }catch(e){}
   const wrap=document.getElementById('ytwrap');
   if(wrap) wrap.innerHTML='<div id="player"></div>';
-  if(window.YT&&YT.Player) buildPlayer();
+  buildPlayer();
+  return true;
 }
 
 function setPlaying(v){
@@ -2112,7 +2121,11 @@ function togglePlay(){
   if(current<0){ if(crate.length) playIndex(0); return; }
   /* 플레이어가 껍데기면 ready 도 믿을 수 없다. 눌렀는데 반응이 없으면 다시 만든다 —
      지금은 사용자가 직접 누른 흐름이라 새 창에서도 재생이 허용된다. */
-  if(!ready){ intendPlay=true; rebuildPlayer(true); return; }
+  if(!ready){                       // 아직 불러오는 중이면 부수지 말고 기다린다
+    intendPlay=true;
+    toast('플레이어를 불러오는 중이에요');
+    return;
+  }
   let st=null;
   try{ st = player.getPlayerState ? player.getPlayerState() : null; }catch(e){ st='dead'; }
   if(st==='dead'){ intendPlay=true; rebuildPlayer(true); return; }
@@ -3545,7 +3558,7 @@ function resync(){
     }
   }catch(e){}
   tryResume();     // iOS 가 백그라운드에서 끊어 놓은 재생을 이어 붙인다
-  if(intendPlay) nudgePlay(2);   // 그래도 안 붙었으면 몇 번 더 눌러 본다
+  if(intendPlay) nudgePlay(2, false);   // 눌러만 보고, 여기서 재생성은 하지 않는다
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(resync,60); });
 window.addEventListener('pageshow',()=>setTimeout(resync,60));
@@ -3840,7 +3853,7 @@ window.addEventListener('resize',()=>{
    한 번에 다시 배치한다. 그 사이 iOS 가 재생을 멈춰 놨으면 되살린다. */
 /* 회전 직후엔 플레이어가 아직 자리를 못 잡아 한 번의 playVideo() 가 씹히는 경우가 있다.
    잠깐 간격을 두고 몇 번 더 눌러 준다. 이미 재생 중이면 아무 것도 하지 않는다. */
-function nudgePlay(tries){
+function nudgePlay(tries, allowRebuild){
   tries = tries==null ? 4 : tries;
   if(!intendPlay) return;
   let isPlaying=false;
@@ -3855,12 +3868,12 @@ function nudgePlay(tries){
        회전 때 iframe 이 통째로 날아가 플레이어가 껍데기가 됐거나.
        후자면 재생 버튼조차 안 먹으므로, 여기서 미리 새로 만들어 두고
        (자동재생은 어차피 막히니 play 는 넘기지 않는다) 탭하라고 알린다. */
-    rebuildPlayer(false);
+    if(allowRebuild) rebuildPlayer(false);   // 회전 직후 한 번만 (그마저 20초 간격 제한)
     toast('자동으로 이어지지 않았어요 — 재생 버튼을 눌러 주세요');
     return;
   }
   try{ if(ready && player.playVideo) player.playVideo(); }catch(e){}
-  setTimeout(()=>nudgePlay(tries-1), 500);
+  setTimeout(()=>nudgePlay(tries-1, allowRebuild), 500);
 }
 let rotating=false, rotT=null;
 window.addEventListener('orientationchange',()=>{
@@ -3873,7 +3886,7 @@ window.addEventListener('orientationchange',()=>{
     document.body.classList.remove('rotating');
     lastResizeW=innerWidth;
     resync();                                   // resync 안에서 layout 도 부른다
-    if(wantPlay) nudgePlay();
+    if(wantPlay) nudgePlay(4, true);
   },420);
 });
 
